@@ -70,7 +70,7 @@ def _tts_volcano(text, voice):
             "app": {"appid": app_id, "token": token, "cluster": "volcano_tts"},
             "user": {"uid": "python-assistant"},
             "audio": {"voice_type": voice, "encoding": "mp3", "rate": 24000},
-            "request": {"text": text, "text_type": "plain", "operation": "query"},
+            "request": {"reqid": str(hash(text))[:16], "text": text, "text_type": "plain", "operation": "query"},
         },
         timeout=30
     )
@@ -82,7 +82,12 @@ def _tts_volcano(text, voice):
     if data.get("code") != 3000:
         raise RuntimeError(f"火山引擎: {data.get('message', 'unknown error')}")
 
-    return base64.b64decode(data["audio"])
+    # 火山引擎返回 base64 在 data 字段中
+    audio_b64 = data.get("data") or data.get("audio") or ""
+    if not audio_b64:
+        raise RuntimeError(f"火山引擎未返回音频: {list(data.keys())}")
+
+    return base64.b64decode(audio_b64)
 
 
 TTS_ENGINES = {
