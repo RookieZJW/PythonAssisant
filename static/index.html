@@ -40,7 +40,7 @@ body::before{
 }
 /* 聊天区背景层 */
 .chat-bg-layer{
-  position:absolute; inset:0; z-index:0; pointer-events:none;
+  position:absolute; inset:0; z-index:-1; pointer-events:none;
   background-image:var(--bg-image); background-size:var(--bg-size);
   background-position:var(--bg-pos); background-repeat:no-repeat;
   display:var(--chat-bg-display,none);
@@ -137,8 +137,8 @@ body::before{
 
 /* ========== Main Chat Area ========== */
 .main{
-  flex:1; display:flex; flex-direction:column; position:relative; z-index:5;
-  min-width:0;
+  flex:1; display:flex; flex-direction:column; position:relative; z-index:1;
+  min-width:0; isolation:isolate;
 }
 .chat-header{
   padding:16px 24px; border-bottom:var(--border-width) solid var(--border);
