@@ -20,7 +20,7 @@ EDGE_VOICES = {
     "e-yunxi":   {"name": "zh-CN-YunxiNeural",   "label": "云希 (Edge·男·阳光)", "engine": "edge"},
     "e-xiaoyi":  {"name": "zh-CN-XiaoyiNeural",  "label": "晓伊 (Edge·女·活泼)", "engine": "edge"},
     "e-yunyang": {"name": "zh-CN-YunyangNeural", "label": "云扬 (Edge·男·沉稳)", "engine": "edge"},
-    "e-xiaochen":{"name": "zh-CN-XiaochenNeural", "label": "晓辰 (Edge·女·温柔)", "engine": "edge"},
+    "e-yunxia":  {"name": "zh-CN-YunxiaNeural",   "label": "云夏 (Edge·男·活泼)", "engine": "edge"},
 }
 
 VOLCANO_VOICES = {
@@ -35,7 +35,8 @@ TENCENT_VOICES = {
     "t-zhiling":  {"name": "1002", "label": "智聆 (腾讯·标准女声)", "engine": "tencent"},
     "t-zhiyu":    {"name": "1001", "label": "智瑜 (腾讯·情感女声)", "engine": "tencent"},
     "t-zhimei":   {"name": "1003", "label": "智美 (腾讯·客服女声)", "engine": "tencent"},
-    "t-zhiyun":   {"name": "1052", "label": "智云 (腾讯·精品男声)", "engine": "tencent"},
+    "t-zhiling2": {"name": "1050", "label": "智聆 (腾讯·精品女声)", "engine": "tencent"},
+    "t-zhiyun":   {"name": "1051", "label": "智云 (腾讯·精品男声)", "engine": "tencent"},
 }
 
 VOICES = {**EDGE_VOICES, **VOLCANO_VOICES, **TENCENT_VOICES}
