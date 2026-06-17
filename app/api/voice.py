@@ -1,93 +1,153 @@
-"""语音合成 (TTS) API — Microsoft Edge TTS（免费，CLI 模式）"""
+"""语音合成 (TTS) API — 支持 edge-tts + 火山引擎"""
 import subprocess
 import tempfile
 import os
 import base64
+import requests
 from flask import Blueprint, request
+from app.config.settings import settings
 from app.utils.response import success, error
 
 voice_bp = Blueprint('voice', __name__)
 
-# 可用音色
-VOICES = {
-    "xiaoxiao": {"name": "zh-CN-XiaoxiaoNeural", "label": "晓晓 (女·温柔)"},
-    "yunxi":   {"name": "zh-CN-YunxiNeural",   "label": "云希 (男·阳光)"},
-    "xiaoyi":  {"name": "zh-CN-XiaoyiNeural",  "label": "晓伊 (女·活泼)"},
-    "yunyang": {"name": "zh-CN-YunyangNeural", "label": "云扬 (男·沉稳)"},
-    "xiaochen": {"name": "zh-CN-XiaochenNeural", "label": "晓辰 (女·温柔)"},
+# ====== 音色库 ======
+EDGE_VOICES = {
+    "e-xiaoxiao": {"name": "zh-CN-XiaoxiaoNeural", "label": "晓晓 (Edge·女·温柔)", "engine": "edge"},
+    "e-yunxi":   {"name": "zh-CN-YunxiNeural",   "label": "云希 (Edge·男·阳光)", "engine": "edge"},
+    "e-xiaoyi":  {"name": "zh-CN-XiaoyiNeural",  "label": "晓伊 (Edge·女·活泼)", "engine": "edge"},
+    "e-yunyang": {"name": "zh-CN-YunyangNeural", "label": "云扬 (Edge·男·沉稳)", "engine": "edge"},
+    "e-xiaochen":{"name": "zh-CN-XiaochenNeural", "label": "晓辰 (Edge·女·温柔)", "engine": "edge"},
 }
 
+VOLCANO_VOICES = {
+    "v-xiaoyuan": {"name": "BV700_streaming", "label": "小源 (火山·通用女声)", "engine": "volcano"},
+    "v-daxia":   {"name": "BV701_streaming", "label": "大夏 (火山·通用男声)", "engine": "volcano"},
+    "v-qingxin": {"name": "BV001_streaming", "label": "清心 (火山·温柔女声)", "engine": "volcano"},
+    "v-zhixing": {"name": "BV002_streaming", "label": "知行 (火山·知性男声)", "engine": "volcano"},
+    "v-tongtong":{"name": "BV406_streaming", "label": "彤彤 (火山·活泼女声)", "engine": "volcano"},
+}
 
-def _generate_tts_cli(text, voice="zh-CN-XiaoxiaoNeural", rate="+5%"):
-    """使用 edge-tts CLI 生成语音，返回 MP3 字节"""
-    # 写入临时文件
+VOICES = {**EDGE_VOICES, **VOLCANO_VOICES}
+DEFAULT_VOICE = "v-xiaoyuan" if settings.VOLCANO_TTS_TOKEN else "e-xiaoxiao"
+
+
+# ====== TTS 引擎实现 ======
+
+def _tts_edge(text, voice, rate="+5%"):
+    """Microsoft Edge TTS"""
     tmp_path = None
     try:
         fd, tmp_path = tempfile.mkstemp(suffix='.mp3')
         os.close(fd)
-
         result = subprocess.run(
             ["edge-tts", "--voice", voice, "--rate", rate,
              "--text", text, "--write-media", tmp_path],
             capture_output=True, text=True, timeout=30
         )
-
         if result.returncode != 0:
-            raise RuntimeError(f"edge-tts failed: {result.stderr[:200]}")
-
+            raise RuntimeError(f"edge-tts: {result.stderr[:200]}")
         with open(tmp_path, 'rb') as f:
             return f.read()
-
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
 
+def _tts_volcano(text, voice):
+    """火山引擎 TTS"""
+    token = settings.VOLCANO_TTS_TOKEN
+    app_id = settings.VOLCANO_TTS_APP_ID
+    if not token or not app_id:
+        raise RuntimeError("火山引擎未配置，请在 .env 中设置 VOLCANO_TTS_TOKEN 和 VOLCANO_TTS_APP_ID")
+
+    resp = requests.post(
+        "https://openspeech.bytedance.com/api/v1/tts",
+        headers={
+            "Authorization": f"Bearer;{token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "app": {"appid": app_id, "token": token, "cluster": "volcano_tts"},
+            "user": {"uid": "python-assistant"},
+            "audio": {"voice_type": voice, "encoding": "mp3", "rate": 24000},
+            "request": {"text": text, "text_type": "plain", "operation": "query"},
+        },
+        timeout=30
+    )
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"火山引擎 ({resp.status_code}): {resp.text[:200]}")
+
+    data = resp.json()
+    if data.get("code") != 3000:
+        raise RuntimeError(f"火山引擎: {data.get('message', 'unknown error')}")
+
+    return base64.b64decode(data["audio"])
+
+
+TTS_ENGINES = {
+    "edge": _tts_edge,
+    "volcano": _tts_volcano,
+}
+
+
+# ====== API ======
+
 @voice_bp.route('/tts', methods=['POST'])
 def tts():
     """
-    文本转语音
     POST /api/v1/tts
-    Body: {"text": "...", "voice": "xiaoxiao"}
+    Body: {"text": "...", "voice": "v-xiaoyuan"}
     """
     data = request.get_json() or {}
     text = data.get("text", "").strip()
-    voice_key = data.get("voice", "xiaoxiao")
-    rate = data.get("rate", "+5%")
+    voice_key = data.get("voice", DEFAULT_VOICE)
 
     if not text:
         return error("text 参数不能为空", 400)
     if len(text) > 5000:
         return error("文本过长，请控制在 5000 字以内", 400)
 
+    v = VOICES.get(voice_key)
+    if not v:
+        return error(f"未知音色: {voice_key}", 400)
+
     try:
-        voice_name = VOICES.get(voice_key, VOICES["xiaoxiao"])["name"]
-        audio_bytes = _generate_tts_cli(text, voice_name, rate)
+        engine_fn = TTS_ENGINES.get(v["engine"])
+        if not engine_fn:
+            return error(f"未知引擎: {v['engine']}", 500)
+
+        extra = {}
+        if v["engine"] == "edge":
+            extra["rate"] = data.get("rate", "+5%")
+
+        audio_bytes = engine_fn(text, v["name"], **extra)
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
         return success({
             "audio": audio_b64,
             "format": "mp3",
-            "voice": voice_name,
+            "voice": v["name"],
+            "voice_key": voice_key,
+            "engine": v["engine"],
             "text_length": len(text),
         })
     except subprocess.TimeoutExpired:
-        return error("语音合成超时，请稍后重试", 500)
+        return error("语音合成超时", 500)
     except FileNotFoundError:
-        return error("edge-tts 未安装，请运行: pip install edge-tts", 500)
+        return error("edge-tts 未安装: pip install edge-tts", 500)
     except Exception as e:
         return error(f"语音合成失败: {str(e)}", 500)
 
 
 @voice_bp.route('/voices', methods=['GET'])
 def list_voices():
-    """获取可用音色列表"""
+    """获取可用音色列表（含引擎标识）"""
     return success([
-        {"key": k, "label": v["label"]}
+        {"key": k, "label": v["label"], "engine": v["engine"]}
         for k, v in VOICES.items()
     ])
 
 
 def register_socketio_events(socketio):
-    """注册 SocketIO 事件（语音通过 HTTP 实现，SocketIO 备用）"""
     pass

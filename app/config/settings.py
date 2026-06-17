@@ -23,6 +23,10 @@ class BaseConfig:
     QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
     QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
 
+    # 火山引擎 TTS 配置（可选）
+    VOLCANO_TTS_APP_ID = os.getenv("VOLCANO_TTS_APP_ID", "")
+    VOLCANO_TTS_TOKEN = os.getenv("VOLCANO_TTS_TOKEN", "")
+
     # Redis 配置
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
