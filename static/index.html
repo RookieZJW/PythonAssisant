@@ -855,13 +855,17 @@ function initSpeech(){
 
 function startListening(){
   if(!initSpeech()) return;
+  // 停止正在播放的语音（打断 AI）
+  stopSpeaking();
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.lang = 'zh-CN';
   recognition.interimResults = true;
-  recognition.continuous = true;
+  recognition.continuous = false;   // 说完自动停止，不开连续模式
   recognition.maxAlternatives = 1;
+
+  let finalText = '';
 
   recognition.onstart = ()=>{
     isListening = true;
@@ -874,34 +878,44 @@ function startListening(){
 
   recognition.onresult = (e)=>{
     let interim = '';
-    let final = '';
     for(let i=e.resultIndex; i<e.results.length; i++){
       const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) final += t;
-      else interim += t;
+      if(e.results[i].isFinal){
+        finalText += t;
+      } else {
+        interim += t;
+      }
     }
-    userInput.value = (final || interim);
-    voiceText.textContent = final || interim || '正在聆听...';
+    userInput.value = finalText + interim;
+    voiceText.textContent = userInput.value || '正在聆听...';
     userInput.style.height = 'auto';
     userInput.style.height = Math.min(userInput.scrollHeight, 150) + 'px';
   };
 
   recognition.onerror = (e)=>{
-    console.error('[Voice] error:', e.error);
-    stopListening();
+    console.log('[Voice] error:', e.error);
+    if(e.error === 'no-speech'){
+      voiceText.textContent = '未检测到语音，请重试';
+    } else if(e.error === 'audio-capture'){
+      voiceText.textContent = '无法访问麦克风';
+    } else if(e.error === 'not-allowed'){
+      voiceText.textContent = '麦克风权限被拒绝';
+    } else {
+      voiceText.textContent = '识别错误: ' + e.error;
+    }
+    // 短暂显示错误后清理
+    setTimeout(()=>cleanupListening(true), 1500);
   };
 
   recognition.onend = ()=>{
-    if(isListening){
-      // Auto-restart if still listening (continuous mode bug workaround)
-      try{ recognition.start(); }catch(e){}
-    }
+    // 自然结束（用户停止说话），自动发送
+    cleanupListening(true);
   };
 
   recognition.start();
 }
 
-function stopListening(){
+function cleanupListening(autoSend){
   isListening = false;
   micBtn.classList.remove('listening');
   micBtn.textContent = '🎤';
@@ -909,15 +923,21 @@ function stopListening(){
   voiceStatus.classList.remove('active');
   if(recognition){
     try{
-      recognition.onend = null;  // prevent auto-restart
-      recognition.stop();
+      recognition.onend = null;
+      recognition.onerror = null;
+      recognition.abort();  // 比 stop() 更快
     }catch(e){}
     recognition = null;
   }
 
-  // Auto-send transcribed text
+  // 说完自动发送
   const text = userInput.value.trim();
-  if(text) sendMessage();
+  if(autoSend && text) sendMessage();
+  userInput.focus();
+}
+
+function stopListening(){
+  cleanupListening(true);
 }
 
 // ---- TTS Playback ----
