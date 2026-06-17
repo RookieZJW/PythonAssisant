@@ -525,6 +525,7 @@ function renderRoleSelect(){
 
 function switchRole(){
   currentRoleId = roleSelect.value;
+  localStorage.setItem('lastRoleId', currentRoleId);
   newConversation();
 }
 
@@ -572,6 +573,7 @@ async function saveRole(){
   closeRoleModal();
   await loadRoles();
   currentRoleId = roles[roles.length-1].id;
+  localStorage.setItem('lastRoleId', currentRoleId);
   renderRoleSelect();
   newConversation();
 }
@@ -954,21 +956,23 @@ document.addEventListener('keydown', function(e){
 
 // ==================== INIT ====================
 async function init(){
+  // 先从 localStorage 恢复上次选择
+  currentRoleId = localStorage.getItem('lastRoleId') || '';
+  currentModel = localStorage.getItem('lastModel') || 'deepseek';
+  currentTtsVoice = localStorage.getItem('ttsVoice') || 'xiaoxiao';
+
   await loadRoles();
   await loadConversations();
+
+  // 恢复 UI 状态
+  document.getElementById('modelBadge').textContent = currentModel==='deepseek'?'DeepSeek':'通义千问';
+  document.getElementById('voiceSelect').value = currentTtsVoice;
 
   // Restore last conversation
   const savedConvId = localStorage.getItem('lastConvId');
   if(savedConvId && conversations.find(c=>c.id===savedConvId)){
     await switchConversation(savedConvId);
   }
-  // Restore last model
-  const savedModel = localStorage.getItem('lastModel');
-  if(savedModel) { currentModel = savedModel; document.getElementById('modelBadge').textContent = savedModel==='deepseek'?'DeepSeek':'通义千问'; }
-
-  // Restore voice settings
-  const savedVoice = localStorage.getItem('ttsVoice');
-  if(savedVoice){ currentTtsVoice = savedVoice; document.getElementById('voiceSelect').value = savedVoice; }
 
   // Connect WebSocket
   connectSocket();
