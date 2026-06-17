@@ -1234,7 +1234,7 @@ function stopSpeaking(){
 async function loadVoices(){
   try{
     const data = await api('GET','/voices');
-    if(data.code===200){
+    if(data.code===200 && data.data.length>0){
       const sel = document.getElementById('voiceSelect');
       sel.innerHTML = '';
       data.data.forEach(v=>{
@@ -1243,14 +1243,23 @@ async function loadVoices(){
         opt.textContent = v.label;
         sel.appendChild(opt);
       });
-      // 恢复保存的音色
-      if(currentTtsVoice) sel.value = currentTtsVoice;
+      // 恢复保存的音色，如果 key 无效则回退到第一个
+      const exists = data.data.find(v=>v.key===currentTtsVoice);
+      if(exists){
+        sel.value = currentTtsVoice;
+      } else {
+        currentTtsVoice = data.data[0].key;
+        sel.value = currentTtsVoice;
+        localStorage.setItem('ttsVoice', currentTtsVoice);
+      }
     }
   }catch(e){}
 }
 
 function changeVoice(){
-  currentTtsVoice = document.getElementById('voiceSelect').value;
+  const sel = document.getElementById('voiceSelect');
+  if(!sel.value) return;
+  currentTtsVoice = sel.value;
   localStorage.setItem('ttsVoice', currentTtsVoice);
 }
 
