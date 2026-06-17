@@ -1265,13 +1265,18 @@ function applyBgFromSaved(){
 }
 
 function applyBg(){
-  const url = document.getElementById('bgUrl').value.trim();
+  let url = document.getElementById('bgUrl').value.trim();
   const type = document.getElementById('bgType').value;
   const mode = document.getElementById('bgMode').value;
   const root = document.documentElement;
   themeSettings.bgUrl = url;
   themeSettings.bgType = type;
   themeSettings.bgMode = mode;
+
+  // 本地路径 → 代理 URL
+  if(url && /^[A-Za-z]:[\\/]/.test(url)){
+    url = '/api/v1/local-media?path=' + encodeURIComponent(url);
+  }
 
   // Remove old video
   document.querySelector('.bg-video')?.remove();
