@@ -1450,7 +1450,11 @@ async function init(){
   // 从 localStorage 恢复上次选择
   currentRoleId = localStorage.getItem('lastRoleId') || '';
   currentModel = localStorage.getItem('lastModel') || 'deepseek';
-  currentTtsVoice = localStorage.getItem('ttsVoice') || 'xiaoxiao';
+  currentTtsVoice = localStorage.getItem('ttsVoice') || 'e-xiaoxiao';
+  // 迁移旧版 key（无前缀 → 新格式）
+  if(currentTtsVoice === 'xiaoxiao') currentTtsVoice = 'e-xiaoxiao';
+  if(currentTtsVoice === 'yunxi') currentTtsVoice = 'e-yunxi';
+  if(currentTtsVoice === 'xiaoyi') currentTtsVoice = 'e-xiaoyi';
 
   await loadRoles();
   await loadConversations();
