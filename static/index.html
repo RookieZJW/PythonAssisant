@@ -216,6 +216,31 @@ body::before{
 .msg-row.system .msg-avatar{display:none}
 .msg-row.system .msg-body{text-align:center}
 .msg-time{font-size:10px; color:var(--text-dim); margin-top:4px; clear:both}
+/* Markdown 渲染 */
+.msg-bubble pre{position:relative; margin:8px 0; border-radius:8px; overflow:hidden}
+.msg-bubble pre code{display:block; padding:14px 16px; overflow-x:auto; font-size:13px; line-height:1.5; background:#0d1117; border:1px solid #30363d}
+.msg-bubble .code-lang{position:absolute; top:6px; right:52px; font-size:10px; color:#8b949e; background:#161b22; padding:2px 8px; border-radius:4px; z-index:1}
+.msg-bubble .copy-btn{position:absolute; top:6px; right:8px; font-size:11px; background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:3px 10px; border-radius:6px; cursor:pointer; opacity:0; transition:opacity .2s; z-index:1}
+.msg-bubble pre:hover .copy-btn{opacity:1}
+.msg-bubble .copy-btn:hover{background:#30363d}
+.msg-bubble .copy-btn.copied{background:#1b4726; border-color:#2ea043; color:#7ee787}
+.msg-bubble p{margin:4px 0}
+.msg-bubble p:first-child{margin-top:0}
+.msg-bubble p:last-child{margin-bottom:0}
+.msg-bubble ul,.msg-bubble ol{padding-left:20px; margin:6px 0}
+.msg-bubble li{margin:2px 0}
+.msg-bubble table{border-collapse:collapse; margin:8px 0; width:100%; font-size:13px}
+.msg-bubble th,.msg-bubble td{border:1px solid var(--border); padding:6px 10px; text-align:left}
+.msg-bubble th{background:var(--bg-card); font-weight:600}
+.msg-bubble blockquote{border-left:3px solid var(--accent); padding:4px 12px; margin:6px 0; color:var(--text-dim); background:rgba(255,255,255,.02); border-radius:0 4px 4px 0}
+.msg-bubble a{color:var(--accent); text-decoration:underline}
+.msg-bubble strong{font-weight:700; color:#fff}
+.msg-bubble hr{border:none; border-top:1px solid var(--border); margin:10px 0}
+.msg-bubble h1,.msg-bubble h2,.msg-bubble h3{font-size:inherit; font-weight:700; margin:8px 0 4px; color:#fff}
+.msg-bubble img{max-width:100%; border-radius:6px}
+.msg-row.user .msg-bubble th{background:rgba(255,255,255,.1)}
+.msg-row.user .msg-bubble blockquote{border-left-color:rgba(255,255,255,.4); color:rgba(255,255,255,.7)}
+.msg-row.user .msg-bubble a{color:#fff}
 .msg-row.user .msg-time{text-align:right}
 .msg-row.assistant .msg-time{text-align:left}
 
@@ -498,6 +523,9 @@ body::before{
 </div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.0/marked.min.js"></script>
 
 <!-- ===== Role Modal ===== -->
 <div class="modal-overlay" id="roleModal" style="display:none">
@@ -839,6 +867,30 @@ function getAssistantIcon(){
   return role ? role.icon : '🤖';
 }
 
+function renderMd(text){
+  if(typeof marked==='undefined') return escHtml(text);
+  try{
+    // 配置 marked
+    if(!marked._configured){
+      marked.setOptions({breaks:true, gfm:true});
+      marked._configured = true;
+    }
+    let html = marked.parse(text);
+    // 注入复制按钮到代码块
+    html = html.replace(/<pre><code( class="language-(\w+)")?>/g,
+      '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
+    return html;
+  }catch(e){ return escHtml(text); }
+}
+
+function copyCode(btn){
+  const code = btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(()=>{
+    btn.textContent='已复制'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='复制'; btn.classList.remove('copied');},2000);
+  });
+}
+
 function addMsg(role, content, scroll=true, iconOverride=null){
   const row = document.createElement('div');
   row.className = 'msg-row '+role;
@@ -851,15 +903,21 @@ function addMsg(role, content, scroll=true, iconOverride=null){
     avatar = getAssistantIcon();
   }
   const time = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  // assistant 消息渲染 Markdown，user 消息纯文本
+  const display = role==='assistant' ? renderMd(content) : escHtml(content);
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
-      <div class="msg-bubble">${escHtml(content)}</div>
+      <div class="msg-bubble">${display}</div>
       <div class="msg-time">${time}</div>
     </div>
   `;
   msgBox.appendChild(row);
   if(scroll) msgBox.scrollTop = msgBox.scrollHeight;
+  // 高亮代码块
+  if(role==='assistant' && typeof hljs!=='undefined'){
+    row.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+  }
   return row.querySelector('.msg-bubble');
 }
 
@@ -923,7 +981,13 @@ async function sendMessage(){
       }
     }
     if(!stopped) try{reader.cancel()}catch(e){}
-    if(!fullText) bubble.textContent='(空回复)';
+    if(fullText){
+      // 流式结束后渲染 Markdown
+      bubble.innerHTML = renderMd(fullText);
+      if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+    } else {
+      bubble.textContent='(空回复)';
+    }
 
   }catch(err){
     typingRow.remove();
