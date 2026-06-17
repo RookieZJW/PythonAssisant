@@ -3,6 +3,7 @@
 """
 import os
 from app import create_app
+from app.extensions import socketio
 
 # 根据环境变量创建应用实例
 app = create_app(os.getenv('FLASK_ENV', 'development'))
@@ -13,4 +14,5 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV', 'development') == 'development'
 
-    app.run(host=host, port=port, debug=debug)
+    # 使用 SocketIO 启动（兼容 WebSocket + HTTP）
+    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)

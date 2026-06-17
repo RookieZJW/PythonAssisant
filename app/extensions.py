@@ -1,8 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 from sqlalchemy import create_engine
 from sqlalchemy_utils import database_exists, create_database
 
 db = SQLAlchemy()
+socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
 
 
 def init_extensions(app):
@@ -13,10 +15,15 @@ def init_extensions(app):
         _ensure_database_exists(db_uri)
 
     db.init_app(app)
+    socketio.init_app(app)
 
     # 创建数据库表
     with app.app_context():
         db.create_all()
+
+    # 注册 SocketIO 事件
+    from .api.voice import register_socketio_events
+    register_socketio_events(socketio)
 
 
 def _ensure_database_exists(db_uri):

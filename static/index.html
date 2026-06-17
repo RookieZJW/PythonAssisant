@@ -200,6 +200,49 @@ body{
 }
 .send-btn:hover{box-shadow:0 0 20px rgba(0,212,255,.4); transform:scale(1.05)}
 .send-btn:disabled{background:var(--border); box-shadow:none; transform:none; cursor:not-allowed}
+.mic-btn{
+  width:48px; height:48px; border-radius:var(--radius);
+  background:var(--bg-card); color:var(--text); border:1px solid var(--border);
+  cursor:pointer; font-size:20px; transition:var(--transition); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.mic-btn:hover{border-color:var(--accent2); box-shadow:0 0 15px rgba(123,47,255,.2)}
+.mic-btn.listening{
+  background:linear-gradient(135deg,var(--accent3),#ff0066);
+  color:#fff; border-color:transparent;
+  animation:micPulse .8s ease-in-out infinite;
+}
+.mic-btn:disabled{opacity:.5; cursor:not-allowed}
+@keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,45,149,.4)}50%{box-shadow:0 0 25px rgba(255,45,149,.8)}}
+.voice-status{
+  position:absolute; top:-32px; left:14px; font-size:11px;
+  color:var(--accent3); display:none; align-items:center; gap:6px;
+}
+.voice-status.active{display:flex}
+.voice-dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);animation:dotBounce 1s infinite}
+.voice-indicator{
+  position:fixed; bottom:120px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.9); color:#fff; border:1px solid var(--accent3);
+  padding:16px 24px; border-radius:20px; font-size:16px; z-index:200;
+  display:none; align-items:center; gap:12px;
+  box-shadow:0 0 30px rgba(255,45,149,.3);
+}
+.voice-indicator.active{display:flex}
+.voice-wave{display:flex; gap:3px; align-items:flex-end; height:30px}
+.voice-wave span{width:3px; background:var(--accent3); border-radius:2px; animation:waveAnim .6s ease-in-out infinite}
+.voice-wave span:nth-child(1){height:10px; animation-delay:0s}
+.voice-wave span:nth-child(2){height:20px; animation-delay:.1s}
+.voice-wave span:nth-child(3){height:15px; animation-delay:.2s}
+.voice-wave span:nth-child(4){height:25px; animation-delay:.3s}
+.voice-wave span:nth-child(5){height:12px; animation-delay:.4s}
+@keyframes waveAnim{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.4)}}
+.voice-settings{display:flex; gap:6px; align-items:center; margin-top:8px}
+.voice-settings select{
+  background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);
+  padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; outline:none;
+}
+.voice-settings select:focus{border-color:var(--accent)}
+#audioPlayer{display:none}
 
 /* ========== Modal ========== */
 .modal-overlay{
@@ -278,7 +321,7 @@ body{
     <div class="logo">⚡</div>
     <div>
       <h2>AI Assistant</h2>
-      <div class="ver">v2.0 · Multi-Role</div>
+      <div class="ver">v2.1 · Multi-Role + Voice</div>
     </div>
   </div>
   <div class="conv-list" id="convList">
@@ -307,15 +350,38 @@ body{
       <div class="msg-body"><div class="msg-bubble">👋 你好！选择一个角色开始聊天吧。<br>左侧可切换历史对话，右上角可创建自定义角色。</div></div>
     </div>
   </div>
+  <!-- Voice Indicator -->
+  <div class="voice-indicator" id="voiceIndicator">
+    <div class="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
+    <span id="voiceText">正在聆听...</span>
+  </div>
   <div class="chat-input-area">
     <div class="input-row">
-      <div class="input-wrapper">
-        <textarea id="userInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行..." rows="1"></textarea>
+      <div class="input-wrapper" style="position:relative">
+        <div class="voice-status" id="voiceStatus"><span class="voice-dot"></span>正在聆听...</div>
+        <textarea id="userInput" placeholder="输入消息，或点击🎤语音说话..." rows="1"></textarea>
       </div>
+      <button class="mic-btn" id="micBtn" title="语音输入">🎤</button>
       <button class="send-btn" id="sendBtn" title="发送">↑</button>
+    </div>
+    <div class="voice-settings">
+      <span style="font-size:11px;color:var(--text-dim)">TTS:</span>
+      <select id="voiceSelect" onchange="changeVoice()">
+        <option value="xiaoxiao">晓晓 (女·温柔)</option>
+        <option value="yunxi">云希 (男·阳光)</option>
+        <option value="xiaoyi">晓伊 (女·活泼)</option>
+        <option value="yunyang">云扬 (男·沉稳)</option>
+        <option value="xiaochen">晓辰 (女·温柔)</option>
+      </select>
+      <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="autoSpeak" checked> 自动朗读
+      </label>
     </div>
   </div>
 </div>
+<audio id="audioPlayer"></audio>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <!-- ===== Role Modal ===== -->
 <div class="modal-overlay" id="roleModal" style="display:none">
@@ -619,6 +685,7 @@ async function sendMessage(){
   // Get role prompt
   const role = roles.find(r=>r.id===currentRoleId);
   const systemPrompt = role ? role.prompt : '';
+  let fullText = '';
 
   try{
     const resp = await fetch('/api/v1/chat/stream',{
@@ -634,7 +701,6 @@ async function sendMessage(){
 
     typingRow.remove();
     const bubble = addMsg('assistant','',false);
-    let fullText = '';
     let stopped = false;
 
     const reader = resp.body.getReader();
@@ -679,6 +745,9 @@ async function sendMessage(){
     }catch(e){}
   }
   await loadConversations();
+
+  // Auto-speak response
+  if(fullText && autoSpeakCb.checked) speakText(fullText);
 }
 
 // ==================== MODEL ====================
@@ -705,6 +774,184 @@ document.getElementById('roleModal').addEventListener('click', function(e){
   if(e.target===this) closeRoleModal();
 });
 
+// ==================== VOICE ====================
+const micBtn = document.getElementById('micBtn');
+const voiceIndicator = document.getElementById('voiceIndicator');
+const voiceText = document.getElementById('voiceText');
+const voiceStatus = document.getElementById('voiceStatus');
+const audioPlayer = document.getElementById('audioPlayer');
+const autoSpeakCb = document.getElementById('autoSpeak');
+let recognition = null;
+let isListening = false;
+let isSpeaking = false;
+let currentTtsVoice = 'xiaoxiao';
+let socket = null;
+
+// ---- Socket.IO ----
+function connectSocket(){
+  try{
+    socket = io({transports:['websocket','polling']});
+    socket.on('connect', ()=>console.log('[WS] connected'));
+    socket.on('tts_chunk', data=>{
+      // Streaming TTS chunks (for future use)
+    });
+    socket.on('tts_done', ()=>console.log('[WS] tts done'));
+    socket.on('tts_error', data=>console.error('[WS] tts error:', data.message));
+    socket.on('disconnect', ()=>console.log('[WS] disconnected'));
+  }catch(e){ console.log('[WS] SocketIO not available, using HTTP fallback'); }
+}
+
+// ---- Speech Recognition ----
+function initSpeech(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    micBtn.style.display = 'none';
+    console.log('[Voice] SpeechRecognition not supported');
+    return false;
+  }
+  return true;
+}
+
+function startListening(){
+  if(!initSpeech()) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-CN';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = ()=>{
+    isListening = true;
+    micBtn.classList.add('listening');
+    micBtn.textContent = '⏹';
+    voiceIndicator.classList.add('active');
+    voiceText.textContent = '正在聆听...';
+    voiceStatus.classList.add('active');
+  };
+
+  recognition.onresult = (e)=>{
+    let interim = '';
+    let final = '';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    userInput.value = (final || interim);
+    voiceText.textContent = final || interim || '正在聆听...';
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 150) + 'px';
+  };
+
+  recognition.onerror = (e)=>{
+    console.error('[Voice] error:', e.error);
+    stopListening();
+  };
+
+  recognition.onend = ()=>{
+    if(isListening){
+      // Auto-restart if still listening (continuous mode bug workaround)
+      try{ recognition.start(); }catch(e){}
+    }
+  };
+
+  recognition.start();
+}
+
+function stopListening(){
+  isListening = false;
+  micBtn.classList.remove('listening');
+  micBtn.textContent = '🎤';
+  voiceIndicator.classList.remove('active');
+  voiceStatus.classList.remove('active');
+  if(recognition){
+    try{
+      recognition.onend = null;  // prevent auto-restart
+      recognition.stop();
+    }catch(e){}
+    recognition = null;
+  }
+
+  // Auto-send transcribed text
+  const text = userInput.value.trim();
+  if(text) sendMessage();
+}
+
+// ---- TTS Playback ----
+async function speakText(text){
+  if(!text || !autoSpeakCb.checked) return;
+  if(text.length > 5000) text = text.substring(0, 5000);
+
+  stopSpeaking();  // stop any ongoing speech first
+  isSpeaking = true;
+
+  try{
+    const resp = await fetch('/api/v1/tts', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text, voice:currentTtsVoice})
+    });
+    const data = await resp.json();
+    if(data.code!==200) throw new Error(data.message);
+
+    // Decode base64 and play
+    const binary = atob(data.data.audio);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    const blob = new Blob([bytes],{type:'audio/mpeg'});
+    const url = URL.createObjectURL(blob);
+
+    audioPlayer.src = url;
+    audioPlayer.onended = ()=>{ isSpeaking=false; URL.revokeObjectURL(url); };
+    audioPlayer.onerror = ()=>{ isSpeaking=false; };
+    await audioPlayer.play();
+  }catch(e){
+    console.error('[Voice] TTS error:', e);
+    isSpeaking = false;
+    // Fallback: browser built-in TTS
+    if(window.speechSynthesis){
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'zh-CN'; utter.rate = 1.1;
+      utter.onend = ()=>isSpeaking=false;
+      speechSynthesis.speak(utter);
+    }
+  }
+}
+
+function stopSpeaking(){
+  audioPlayer.pause();
+  audioPlayer.currentTime = 0;
+  isSpeaking = false;
+  if(window.speechSynthesis){
+    speechSynthesis.cancel();
+  }
+}
+
+function changeVoice(){
+  currentTtsVoice = document.getElementById('voiceSelect').value;
+  localStorage.setItem('ttsVoice', currentTtsVoice);
+}
+
+// ---- Mic Button ----
+micBtn.addEventListener('click', function(){
+  if(isListening){
+    stopListening();
+  } else {
+    stopSpeaking();  // interrupt AI voice when user starts talking
+    startListening();
+  }
+});
+
+// Keyboard shortcut: Ctrl+M to toggle mic
+document.addEventListener('keydown', function(e){
+  if(e.ctrlKey && e.key==='m'){
+    e.preventDefault();
+    micBtn.click();
+  }
+});
+
 // ==================== INIT ====================
 async function init(){
   await loadRoles();
@@ -718,6 +965,13 @@ async function init(){
   // Restore last model
   const savedModel = localStorage.getItem('lastModel');
   if(savedModel) { currentModel = savedModel; document.getElementById('modelBadge').textContent = savedModel==='deepseek'?'DeepSeek':'通义千问'; }
+
+  // Restore voice settings
+  const savedVoice = localStorage.getItem('ttsVoice');
+  if(savedVoice){ currentTtsVoice = savedVoice; document.getElementById('voiceSelect').value = savedVoice; }
+
+  // Connect WebSocket
+  connectSocket();
 }
 
 // Persist model on switch
