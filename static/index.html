@@ -872,20 +872,34 @@ function getAssistantIcon(){
   return role ? role.icon : '🤖';
 }
 
-function renderMd(text){
-  if(typeof marked==='undefined'){ console.warn('[MD] marked not loaded'); return escHtml(text); }
-  try{
-    // 配置 marked
-    if(!marked._configured){
-      marked.setOptions({breaks:true, gfm:true});
-      marked._configured = true;
-    }
-    let html = marked.parse(text);
-    // 注入复制按钮到代码块
-    html = html.replace(/<pre><code( class="language-(\w+)")?>/g,
-      '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
-    return html;
-  }catch(e){ console.error('[MD] parse error:', e.message, 'text[:100]:', text.slice(0,100)); return escHtml(text); }
+function renderMd(text, full){
+  if(!text) return '';
+  // 先用正则做行内渲染（永不出错），流式输出用这个
+  let html = escHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g,'<em>$1</em>');
+  html = html.replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:3px;font-size:13px">$1</code>');
+  html = html.replace(/```(\w*)\n?([\\s\\S]*?)```/g, function(_,lang,code){
+    return '<pre><span class="code-lang">'+escHtml(lang)+'</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code'+(lang?' class="language-'+lang+'"':'')+'>'+escHtml(code.trimEnd())+'</code></pre>';
+  });
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  html = html.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  html = html.replace(/^\- (.+)$/gm,'<li>$1</li>');
+  html = html.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  html = html.replace(/\\n\\n/g,'<br><br>').replace(/\\n/g,'<br>');
+
+  // 完整渲染：用 marked 增强（表格、嵌套列表等）
+  if(full && typeof marked!=='undefined'){
+    try{
+      if(!marked._configured){marked.setOptions({breaks:true,gfm:true});marked._configured=true;}
+      html = marked.parse(text);
+      html = html.replace(/<pre><code( class="language-(\\w+)")?>/g,
+        '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
+    }catch(e){console.error('[MD] full:',e.message)}
+  }
+  return html;
 }
 
 function copyCode(btn){
@@ -908,8 +922,8 @@ function addMsg(role, content, scroll=true, iconOverride=null){
     avatar = getAssistantIcon();
   }
   const time = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  // assistant 消息渲染 Markdown，user 消息纯文本
-  const display = role==='assistant' ? renderMd(content) : escHtml(content);
+  // assistant 消息渲染 Markdown（历史消息用完整 marked 渲染）
+  const display = role==='assistant' ? renderMd(content, true) : escHtml(content);
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
@@ -987,8 +1001,8 @@ async function sendMessage(){
     }
     if(!stopped) try{reader.cancel()}catch(e){}
     if(fullText){
-      // 最终完整渲染 + 代码高亮
-      bubble.innerHTML = renderMd(fullText);
+      // 最终用 marked 完整渲染 + 代码高亮
+      bubble.innerHTML = renderMd(fullText, true);
       if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
     } else {
       bubble.textContent='(空回复)';
