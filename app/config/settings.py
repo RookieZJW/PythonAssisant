@@ -27,6 +27,10 @@ class BaseConfig:
     VOLCANO_TTS_APP_ID = os.getenv("VOLCANO_TTS_APP_ID", "")
     VOLCANO_TTS_TOKEN = os.getenv("VOLCANO_TTS_TOKEN", "")
 
+    # 腾讯云 TTS 配置（可选）
+    TENCENT_TTS_SECRET_ID = os.getenv("TENCENT_TTS_SECRET_ID", "")
+    TENCENT_TTS_SECRET_KEY = os.getenv("TENCENT_TTS_SECRET_KEY", "")
+
     # Redis 配置
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 

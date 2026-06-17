@@ -1,9 +1,13 @@
-"""语音合成 (TTS) API — 支持 edge-tts + 火山引擎"""
+"""语音合成 (TTS) API — 支持 edge-tts + 火山引擎 + 腾讯云"""
 import subprocess
 import tempfile
 import os
 import base64
 import requests
+import json
+import hashlib
+import hmac
+import time
 from flask import Blueprint, request
 from app.config.settings import settings
 from app.utils.response import success, error
@@ -27,7 +31,14 @@ VOLCANO_VOICES = {
     "v-tongtong":{"name": "BV406_streaming", "label": "彤彤 (火山·活泼女声)", "engine": "volcano"},
 }
 
-VOICES = {**EDGE_VOICES, **VOLCANO_VOICES}
+TENCENT_VOICES = {
+    "t-zhiling":  {"name": "1002", "label": "智聆 (腾讯·标准女声)", "engine": "tencent"},
+    "t-zhiyu":    {"name": "1001", "label": "智瑜 (腾讯·情感女声)", "engine": "tencent"},
+    "t-zhimei":   {"name": "1003", "label": "智美 (腾讯·客服女声)", "engine": "tencent"},
+    "t-zhiyun":   {"name": "1052", "label": "智云 (腾讯·精品男声)", "engine": "tencent"},
+}
+
+VOICES = {**EDGE_VOICES, **VOLCANO_VOICES, **TENCENT_VOICES}
 DEFAULT_VOICE = "v-xiaoyuan" if settings.VOLCANO_TTS_TOKEN else "e-xiaoxiao"
 
 
@@ -90,9 +101,38 @@ def _tts_volcano(text, voice):
     return base64.b64decode(audio_b64)
 
 
+def _tts_tencent(text, voice):
+    """腾讯云 TTS"""
+    sid = settings.TENCENT_TTS_SECRET_ID
+    skey = settings.TENCENT_TTS_SECRET_KEY
+    if not sid or not skey:
+        raise RuntimeError("腾讯云 TTS 未配置，请在 .env 中设置 TENCENT_TTS_SECRET_ID 和 TENCENT_TTS_SECRET_KEY")
+
+    from tencentcloud.common import credential
+    from tencentcloud.tts.v20190823 import tts_client, models
+
+    cred = credential.Credential(sid, skey)
+    client = tts_client.TtsClient(cred, "")
+    req = models.TextToVoiceRequest()
+    req.Text = text
+    req.VoiceType = int(voice)
+    req.SessionId = hashlib.md5(text.encode()).hexdigest()[:16]
+    req.Codec = "mp3"
+    req.SampleRate = 16000
+    req.Volume = 5
+    req.Speed = 0
+
+    resp = client.TextToVoice(req)
+    audio_b64 = resp.Audio
+    if not audio_b64:
+        raise RuntimeError(f"腾讯云未返回音频")
+    return base64.b64decode(audio_b64)
+
+
 TTS_ENGINES = {
     "edge": _tts_edge,
     "volcano": _tts_volcano,
+    "tencent": _tts_tencent,
 }
 
 

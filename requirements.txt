@@ -33,3 +33,4 @@ gevent==24.2.1
 # 语音功能
 edge-tts>=7.2
 flask-socketio==5.4.1
+tencentcloud-sdk-python-tts>=3.1
