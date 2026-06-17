@@ -885,7 +885,7 @@ function renderMd(text){
     html = html.replace(/<pre><code( class="language-(\w+)")?>/g,
       '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
     return html;
-  }catch(e){ return escHtml(text); }
+  }catch(e){ console.error('[MD] parse error:', e.message, 'text[:100]:', text.slice(0,100)); return escHtml(text); }
 }
 
 function copyCode(btn){
