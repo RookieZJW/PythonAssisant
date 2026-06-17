@@ -965,6 +965,7 @@ async function sendMessage(){
     typingRow.remove();
     const bubble = addMsg('assistant','',false);
     let stopped = false;
+    let renderTick = 0;
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -979,15 +980,19 @@ async function sendMessage(){
         if(!line.startsWith('data: ')) continue;
         const data = line.substring(6);
         if(data==='[DONE]'){stopped=true;break readLoop}
-        if(data.startsWith('[ERROR]')){fullText='⚠ '+data.substring(7);bubble.textContent=fullText;stopped=true;break readLoop}
+        if(data.startsWith('[ERROR]')){fullText='⚠ '+data.substring(7);stopped=true;break readLoop}
         fullText += data;
-        bubble.textContent = fullText;
-        msgBox.scrollTop = msgBox.scrollHeight;
+        // 每 3 个 chunk 实时渲染一次
+        renderTick++;
+        if(renderTick % 3 === 0 || data.includes('\n')){
+          bubble.innerHTML = renderMd(fullText);
+          msgBox.scrollTop = msgBox.scrollHeight;
+        }
       }
     }
     if(!stopped) try{reader.cancel()}catch(e){}
     if(fullText){
-      // 流式结束后渲染 Markdown
+      // 最终完整渲染 + 代码高亮
       bubble.innerHTML = renderMd(fullText);
       if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
     } else {
