@@ -24,11 +24,14 @@ EDGE_VOICES = {
 }
 
 VOLCANO_VOICES = {
-    "v-xiaoyuan": {"name": "BV700_streaming", "label": "小源 (火山·通用女声)", "engine": "volcano"},
-    "v-daxia":   {"name": "BV701_streaming", "label": "大夏 (火山·通用男声)", "engine": "volcano"},
-    "v-qingxin": {"name": "BV001_streaming", "label": "清心 (火山·温柔女声)", "engine": "volcano"},
-    "v-zhixing": {"name": "BV002_streaming", "label": "知行 (火山·知性男声)", "engine": "volcano"},
-    "v-tongtong":{"name": "BV406_streaming", "label": "彤彤 (火山·活泼女声)", "engine": "volcano"},
+    "v-xiaoyuan": {"name": "BV700_streaming", "label": "小源 (火山·V2女声)", "engine": "volcano"},
+    "v-daxia":   {"name": "BV701_streaming", "label": "大夏 (火山·V2男声)", "engine": "volcano"},
+    "v-qingxin": {"name": "BV001_streaming", "label": "清心 (火山·通用女声)", "engine": "volcano"},
+    "v-zhixing": {"name": "BV002_streaming", "label": "知行 (火山·通用男声)", "engine": "volcano"},
+    "v-zhixing2":{"name": "BV004_streaming", "label": "知性 (火山·清晰女声)", "engine": "volcano"},
+    "v-tongtong": {"name": "BV005_streaming", "label": "彤彤 (火山·童声)", "engine": "volcano"},
+    "v-xiaoai":  {"name": "BV401_streaming", "label": "小艾 (火山·情感女声)", "engine": "volcano"},
+    "v-daqing":  {"name": "BV402_streaming", "label": "大庆 (火山·情感男声)", "engine": "volcano"},
 }
 
 TENCENT_VOICES = {
