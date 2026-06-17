@@ -338,6 +338,8 @@ body{
     <select id="roleSelect" onchange="switchRole()">
       <!-- dynamic -->
     </select>
+    <button class="header-btn" id="btnEditRole" onclick="editCurrentRole()" title="编辑当前角色" style="display:none">✏️</button>
+    <button class="header-btn" id="btnDelRole" onclick="deleteCurrentRole()" title="删除当前角色" style="display:none">🗑️</button>
     <span class="model-badge" id="modelBadge">DeepSeek</span>
     <div class="header-actions">
       <button class="header-btn" onclick="toggleModel()" title="切换模型">🔄 模型</button>
@@ -531,6 +533,7 @@ function renderRoleSelect(){
 function switchRole(){
   currentRoleId = roleSelect.value;
   localStorage.setItem('lastRoleId', currentRoleId);
+  updateRoleButtons();
   newConversation();  // 清屏 + 创建新会话，不碰历史消息
 }
 
@@ -583,10 +586,47 @@ async function saveRole(){
   currentRoleId = newRoleId || (roles.length>0 ? roles[roles.length-1].id : '');
   localStorage.setItem('lastRoleId', currentRoleId);
   renderRoleSelect();
+  updateRoleButtons();
   newConversation();
 }
 
 // Double-click role to edit
+function editCurrentRole(){
+  const role = roles.find(r=>r.id===currentRoleId);
+  if(!role) return;
+  if(role.is_builtin){ alert('内置角色不可编辑，请用"＋ 角色"创建新角色后编辑'); return; }
+  openRoleModal(role);
+}
+
+async function deleteCurrentRole(){
+  const role = roles.find(r=>r.id===currentRoleId);
+  if(!role) return;
+  if(role.is_builtin){ alert('内置角色不可删除'); return; }
+  if(!confirm('确定删除角色 "'+role.name+'"？此操作不可恢复。')) return;
+
+  const resp = await api('DELETE','/roles/'+role.id);
+  if(resp.code===200){
+    await loadRoles();
+    // 切换到第一个角色
+    if(roles.length>0){
+      currentRoleId = roles[0].id;
+      localStorage.setItem('lastRoleId', currentRoleId);
+      roleSelect.value = currentRoleId;
+    }
+    renderRoleSelect();
+    newConversation();
+  } else {
+    alert('删除失败: '+resp.message);
+  }
+}
+
+function updateRoleButtons(){
+  const role = roles.find(r=>r.id===currentRoleId);
+  const isCustom = role && !role.is_builtin;
+  document.getElementById('btnEditRole').style.display = isCustom ? '' : 'none';
+  document.getElementById('btnDelRole').style.display = isCustom ? '' : 'none';
+}
+
 roleSelect.addEventListener('dblclick', function(){
   const role = roles.find(r=>r.id===currentRoleId);
   if(role && !role.is_builtin) openRoleModal(role);
@@ -640,6 +680,7 @@ async function switchConversation(convId){
       localStorage.setItem('lastRoleId', currentRoleId);
       roleSelect.value = currentRoleId;
       convRoleIcon = role.icon;
+      updateRoleButtons();
     }
   }
 
@@ -1036,6 +1077,9 @@ async function init(){
   // 更新初始欢迎消息的头像为当前角色
   const firstAvatar = document.querySelector('#messages .msg-row.assistant .msg-avatar');
   if(firstAvatar) firstAvatar.textContent = getAssistantIcon();
+
+  // 显示/隐藏角色编辑删除按钮
+  updateRoleButtons();
 
   // Connect WebSocket
   connectSocket();

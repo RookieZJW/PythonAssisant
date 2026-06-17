@@ -6,71 +6,139 @@
 <title>麦克风测试</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#0a0a14;color:#d0d0e0;display:flex;justify-content:center;align-items:center;height:100vh}
-.test-card{background:#0f0f23;border:1px solid #1f1f40;border-radius:16px;padding:40px;text-align:center;max-width:500px;width:90%}
-h2{font-size:24px;margin-bottom:24px}
-.status{font-size:16px;padding:12px 20px;border-radius:8px;margin:16px 0;background:#151530}
-.status.ok{background:rgba(0,200,100,.15);color:#0c8}
-.status.err{background:rgba(255,60,60,.15);color:#f55}
-button{
-  padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;
-  border:none;margin:8px;transition:.2s
-}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#0a0a14;color:#d0d0e0;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.test-card{background:#0f0f23;border:1px solid #1f1f40;border-radius:16px;padding:32px;max-width:560px;width:100%}
+h2{font-size:22px;margin-bottom:20px;text-align:center}
+.device-info{background:#151530;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px}
+.device-info select{width:100%;background:#0f0f23;color:#fff;border:1px solid #1f1f40;padding:8px;border-radius:6px;margin-top:8px;font-size:13px}
+.status{font-size:15px;padding:12px 16px;border-radius:8px;margin:12px 0;background:#151530;text-align:center}
+.status.ok{background:rgba(0,200,100,.12);color:#0c8}
+.status.err{background:rgba(255,60,60,.12);color:#f55}
+.status.warn{background:rgba(255,180,0,.12);color:#fa0}
+.bar-container{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:100px;margin:16px 0}
+.bar{width:7px;background:linear-gradient(to top,#00d4ff,#7b2fff);border-radius:3px;transition:height .06s}
+.volume-text{font-size:12px;color:#707090;text-align:center}
+.btn-row{display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+button{padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
 .btn-test{background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff}
 .btn-test:hover{box-shadow:0 0 20px rgba(0,212,255,.4)}
 .btn-stop{background:#ff2d95;color:#fff}
 .btn-stop:hover{box-shadow:0 0 20px rgba(255,45,149,.4)}
-.bar-container{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:120px;margin:20px 0}
-.bar{width:8px;background:linear-gradient(to top,#00d4ff,#7b2fff);border-radius:4px;transition:height .05s}
-.volume-text{font-size:13px;color:#707090}
-.info{font-size:12px;color:#707090;margin-top:16px;text-align:left;line-height:1.8}
-.info span{color:#00d4ff}
+.btn-record{background:linear-gradient(135deg,#ff2d95,#ff6600);color:#fff}
+.btn-record.recording{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.tips{font-size:12px;color:#707090;line-height:2;margin-top:12px;background:#151530;border-radius:8px;padding:14px 18px}
+.tips strong{color:#00d4ff}
+.playback-audio{margin-top:12px;width:100%;display:none}
 </style>
 </head>
 <body>
 <div class="test-card">
-  <h2>🎤 麦克风测试</h2>
-  <div class="status" id="status">点击下方按钮开始测试</div>
-  <div class="bar-container" id="bars"></div>
-  <div class="volume-text" id="volumeText">等待测试...</div>
-  <div>
-    <button class="btn-test" id="btnTest" onclick="startTest()">🔴 开始测试</button>
-    <button class="btn-stop" id="btnStop" onclick="stopTest()" style="display:none">⏹ 停止</button>
+  <h2>🎤 麦克风诊断</h2>
+
+  <div class="device-info">
+    <strong>📋 检测到的输入设备：</strong>
+    <select id="deviceSelect" onchange="switchDevice()">
+      <option>点击"开始测试"后刷新列表...</option>
+    </select>
   </div>
-  <div class="info">
-    <p><span>✅ 看到彩色音量条跳动</span> = 麦克风正常</p>
-    <p><span>❌ 弹权限请求后无反应</span> = 权限被拒绝</p>
-    <p><span>❌ 提示"未找到设备"</span> = 麦克风未连接/驱动问题</p>
-    <p><span>💡 提示</span>：Chrome 需要 HTTPS 或 localhost 才能使用麦克风</p>
+
+  <div class="status" id="status">点击下方按钮开始</div>
+
+  <div class="bar-container" id="bars"></div>
+  <div class="volume-text" id="volumeText"></div>
+
+  <div class="btn-row">
+    <button class="btn-test" id="btnTest" onclick="startTest()">🎤 音量测试</button>
+    <button class="btn-record" id="btnRecord" onclick="toggleRecord()">🔴 录音回放</button>
+    <button class="btn-stop" id="btnStop" onclick="stopAll()" style="display:none">⏹ 停止</button>
+  </div>
+
+  <audio class="playback-audio" id="playback" controls></audio>
+
+  <div class="tips">
+    <strong>🔧 音量条不动？</strong><br>
+    ① <strong>Win+I</strong> → 隐私和安全性 → 麦克风 → 确保 <strong>"麦克风访问"已开启</strong><br>
+    ② 检查 <strong>"允许应用访问麦克风"</strong> 是否打开<br>
+    ③ 确认 Chrome/Edge 在列表中且 <strong>开关为 ON</strong><br>
+    ④ 右键任务栏 🔊 → <strong>声音设置</strong> → 输入 → 选对设备 → 对着麦说话看进度条<br>
+    ⑤ 如果用的<strong>蓝牙耳机</strong>，检查是否选到了 "Hands-Free" 而非 "Stereo"<br>
+    ⑥ 如果用的<strong>外接摄像头麦克风</strong>，检查 USB 口是否接触不良
   </div>
 </div>
 
 <script>
-let audioCtx = null;
-let analyser = null;
-let micStream = null;
-let animId = null;
+let audioCtx = null, analyser = null, micStream = null, animId = null;
+let mediaRecorder = null, recordedChunks = [];
+let isRecording = false;
 
-// 构建音量条
+// 音量条
 const barsContainer = document.getElementById('bars');
 for(let i=0;i<32;i++){
-  const bar = document.createElement('div');
-  bar.className='bar';
-  bar.style.height='4px';
+  const bar = document.createElement('div'); bar.className='bar'; bar.style.height='4px';
   barsContainer.appendChild(bar);
 }
 
+function setStatus(msg, type){
+  const s = document.getElementById('status');
+  s.textContent = msg; s.className = 'status '+(type||'');
+}
+
+// 列出设备
+async function listDevices(){
+  try{
+    // 先请求权限拿到设备标签
+    const tmp = await navigator.mediaDevices.getUserMedia({audio:true});
+    tmp.getTracks().forEach(t=>t.stop());
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputs = devices.filter(d=>d.kind==='audioinput');
+    const sel = document.getElementById('deviceSelect');
+    sel.innerHTML = '';
+    if(inputs.length===0){
+      sel.innerHTML = '<option>未检测到任何麦克风设备</option>';
+    } else {
+      inputs.forEach((d,i)=>{
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+        opt.textContent = (d.label || '麦克风 #'+(i+1)) + (i===0?' (默认)':'');
+        sel.appendChild(opt);
+      });
+    }
+  }catch(e){
+    document.getElementById('deviceSelect').innerHTML = '<option>无法获取设备列表（权限未授予）</option>';
+  }
+}
+
+async function switchDevice(){
+  if(micStream){
+    stopAll();
+    await startTest();
+  }
+}
+
 async function startTest(){
-  const status = document.getElementById('status');
-  const volText = document.getElementById('volumeText');
+  stopAll();
+  setStatus('正在请求麦克风权限...');
+
+  const deviceId = document.getElementById('deviceSelect').value;
 
   try{
-    status.textContent = '正在请求麦克风权限...';
-    status.className = 'status';
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: deviceId ? {deviceId:{exact:deviceId}} : true
+    });
 
-    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    // 列出设备
+    await listDevices();
 
-    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+    // 检查音轨
+    const track = micStream.getAudioTracks()[0];
+    if(!track){
+      setStatus('❌ 无法获取音频轨道', 'err');
+      return;
+    }
+    console.log('使用设备:', track.label, '状态:', track.readyState);
+
+    audioCtx = new(window.AudioContext||window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
     const source = audioCtx.createMediaStreamSource(micStream);
@@ -78,11 +146,9 @@ async function startTest(){
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    let maxEver = 0;
 
-    status.textContent = '✅ 麦克风已连接！请说话...';
-    status.className = 'status ok';
-
-    document.getElementById('btnTest').style.display = 'none';
+    setStatus('✅ 麦克风: '+track.label+' — 请对着麦克风说话！', 'ok');
     document.getElementById('btnStop').style.display = 'inline-block';
 
     function updateBars(){
@@ -90,16 +156,23 @@ async function startTest(){
       const bars = barsContainer.children;
       let total = 0;
       for(let i=0;i<32;i++){
-        const val = dataArray[Math.floor(i * bufferLength / 32)];
-        const h = Math.max(4, val * 1.2);
-        bars[i].style.height = h + 'px';
+        const val = dataArray[Math.floor(i*bufferLength/32)];
+        bars[i].style.height = Math.max(3, val*1.1) + 'px';
         total += val;
       }
-      const avg = total / 32;
-      if(avg > 10){
-        volText.textContent = '音量: ' + (avg/2.56).toFixed(0) + '% — 麦克风正常 👍';
+      const avg = total/32;
+      if(avg > maxEver) maxEver = avg;
+      const vol = document.getElementById('volumeText');
+
+      if(maxEver < 3){
+        vol.textContent = '⚠ 完全没有声音信号 — 检查麦克风是否静音或选错设备';
+        vol.style.color = '#fa0';
+      } else if(avg > 8){
+        vol.textContent = '音量: '+(avg/2.56).toFixed(0)+'% — 麦克风正常 👍';
+        vol.style.color = '#0c8';
       } else {
-        volText.textContent = '音量: 很低 — 请靠近麦克风说话';
+        vol.textContent = '音量: 很低 ('+(avg/2.56).toFixed(0)+'%) — 但能检测到声音，请靠近说话';
+        vol.style.color = '#707090';
       }
       animId = requestAnimationFrame(updateBars);
     }
@@ -107,33 +180,70 @@ async function startTest(){
 
   }catch(err){
     console.error(err);
-    status.className = 'status err';
-    if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
-      status.textContent = '❌ 麦克风权限被拒绝，请在浏览器设置中允许';
-    } else if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError'){
-      status.textContent = '❌ 未检测到麦克风设备';
-    } else if(err.name === 'NotReadableError'){
-      status.textContent = '❌ 麦克风被其他应用占用';
+    if(err.name==='NotAllowedError'){
+      setStatus('❌ 权限被拒绝。请在浏览器地址栏左侧点击锁图标 → 允许麦克风', 'err');
+    } else if(err.name==='NotFoundError'){
+      setStatus('❌ 未检测到麦克风。请确认设备已连接', 'err');
     } else {
-      status.textContent = '❌ 错误: ' + err.message;
+      setStatus('❌ '+err.message, 'err');
     }
   }
 }
 
-function stopTest(){
+// 录音回放测试
+async function toggleRecord(){
+  if(isRecording){
+    // 停止录音
+    mediaRecorder.stop();
+    isRecording = false;
+    document.getElementById('btnRecord').textContent = '🔴 录音回放';
+    document.getElementById('btnRecord').classList.remove('recording');
+    setStatus('处理录音中...');
+    return;
+  }
+
+  if(!micStream){
+    // 先获取麦克风
+    try{
+      micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    }catch(e){
+      setStatus('❌ 无法访问麦克风: '+e.message, 'err');
+      return;
+    }
+  }
+
+  recordedChunks = [];
+  try{
+    mediaRecorder = new MediaRecorder(micStream);
+    mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = ()=>{
+      const blob = new Blob(recordedChunks, {type:'audio/webm'});
+      const url = URL.createObjectURL(blob);
+      const audio = document.getElementById('playback');
+      audio.src = url;
+      audio.style.display = 'block';
+      setStatus('✅ 录音完成！点击下方播放按钮回听', 'ok');
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById('btnRecord').textContent = '⏹ 停止录音';
+    document.getElementById('btnRecord').classList.add('recording');
+    setStatus('🔴 正在录音...请说话，说完点"停止录音"', 'warn');
+  }catch(e){
+    setStatus('❌ 录音失败: '+e.message, 'err');
+    console.error(e);
+  }
+}
+
+function stopAll(){
   if(animId) cancelAnimationFrame(animId);
+  if(mediaRecorder && isRecording){ mediaRecorder.stop(); isRecording = false; }
   if(micStream) micStream.getTracks().forEach(t=>t.stop());
   if(audioCtx) audioCtx.close();
-  audioCtx = null;
-  analyser = null;
-  micStream = null;
-
-  document.getElementById('status').textContent = '测试已停止，点击按钮重新测试';
-  document.getElementById('status').className = 'status';
-  document.getElementById('volumeText').textContent = '等待测试...';
-  document.getElementById('btnTest').style.display = 'inline-block';
+  audioCtx=null; analyser=null; micStream=null; animId=null;
+  document.getElementById('btnRecord').textContent = '🔴 录音回放';
+  document.getElementById('btnRecord').classList.remove('recording');
   document.getElementById('btnStop').style.display = 'none';
-
   const bars = barsContainer.children;
   for(let i=0;i<bars.length;i++) bars[i].style.height = '4px';
 }
