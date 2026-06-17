@@ -17,13 +17,52 @@
   --glow:0 0 20px rgba(0,212,255,.15),0 0 60px rgba(0,212,255,.05);
   --radius:12px; --radius-sm:8px;
   --transition:0.25s cubic-bezier(.4,0,.2,1);
+  /* 主题扩展 */
+  --panel-opacity:1; --header-opacity:1; --input-opacity:1;
+  --border-width:1px; --bg-image:none; --bg-video:none;
+  --bg-size:cover; --bg-pos:center; --bg-mode:full;
 }
 body{
   font-family:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
   background:var(--bg-deep); color:var(--text);
-  height:100vh; overflow:hidden;
-  display:flex;
+  height:100vh; overflow:hidden; display:flex;
+  position:relative;
 }
+/* 全屏背景层 */
+body::before{
+  content:''; position:fixed; inset:0; z-index:-1;
+  background-image:var(--bg-image); background-size:var(--bg-size);
+  background-position:var(--bg-pos); background-repeat:no-repeat;
+  opacity:var(--bg-mode)=='full'?1:0; pointer-events:none;
+}
+/* 聊天区背景层 */
+.chat-bg-layer{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:var(--bg-image); background-size:var(--bg-size);
+  background-position:var(--bg-pos); background-repeat:no-repeat;
+  display:var(--chat-bg-display,none);
+}
+/* 背景视频 */
+.bg-video{
+  position:fixed; inset:0; z-index:-2; object-fit:cover;
+  width:100%; height:100%; display:none; pointer-events:none;
+}
+/* 主题网格 */
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.theme-card{
+  padding:14px 10px;border-radius:var(--radius-sm);cursor:pointer;
+  border:2px solid transparent;text-align:center;transition:var(--transition);
+  font-size:11px;color:var(--text-dim);
+}
+.theme-card:hover{border-color:var(--accent)}
+.theme-card.active{border-color:var(--accent);box-shadow:0 0 12px rgba(0,212,255,.2)}
+.theme-card .tc-preview{display:flex;gap:3px;margin-bottom:6px;justify-content:center}
+.theme-card .tc-dot{width:16px;height:16px;border-radius:50%}
+.slider-row{display:flex;gap:10px;align-items:center;margin-top:4px}
+.slider-row span{font-size:12px;color:var(--text-dim)}
+.slider-row span:first-child{width:50px;flex-shrink:0}
+.slider-row span:last-child{width:36px;text-align:right}
+.slider-row input[type=range]{flex:1;accent-color:var(--accent)}
 
 /* ========== Particle Background ========== */
 #particles{
@@ -36,8 +75,9 @@ body{
   width:280px; min-width:280px; height:100vh;
   background:var(--bg-panel); z-index:10;
   display:flex; flex-direction:column;
-  border-right:1px solid var(--border);
+  border-right:var(--border-width) solid var(--border);
   transition:transform var(--transition);
+  opacity:var(--panel-opacity);
 }
 .sidebar-header{
   padding:20px; border-bottom:1px solid var(--border);
@@ -96,9 +136,10 @@ body{
 }
 .chat-header{
   padding:16px 24px; background:var(--bg-panel);
-  border-bottom:1px solid var(--border);
+  border-bottom:var(--border-width) solid var(--border);
   display:flex; align-items:center; gap:12px;
   backdrop-filter:blur(20px);
+  opacity:var(--header-opacity);
 }
 .chat-header select{
   background:var(--bg-card); color:#fff; border:1px solid var(--border);
@@ -176,7 +217,8 @@ body{
 /* ========== Input Area ========== */
 .chat-input-area{
   padding:16px 24px 20px; background:var(--bg-panel);
-  border-top:1px solid var(--border);
+  border-top:var(--border-width) solid var(--border);
+  opacity:var(--input-opacity);
 }
 .input-row{display:flex; gap:12px; align-items:flex-end}
 .input-wrapper{
@@ -342,6 +384,7 @@ body{
     <button class="header-btn" id="btnDelRole" onclick="deleteCurrentRole()" title="删除当前角色" style="display:none">🗑️</button>
     <span class="model-badge" id="modelBadge">DeepSeek</span>
     <div class="header-actions">
+      <button class="header-btn" onclick="openThemeModal()" title="主题风格">🎨 主题</button>
       <button class="header-btn" onclick="toggleModel()" title="切换模型">🔄 模型</button>
       <button class="header-btn" onclick="openRoleModal()" title="创建角色">＋ 角色</button>
     </div>
@@ -382,6 +425,60 @@ body{
   </div>
 </div>
 <audio id="audioPlayer"></audio>
+
+<!-- ===== Theme Modal ===== -->
+<div class="modal-overlay" id="themeModal" style="display:none">
+  <div class="modal" style="max-width:600px;max-height:85vh;overflow-y:auto">
+    <h3>🎨 主题风格</h3>
+
+    <!-- 预设主题 -->
+    <label>预设主题</label>
+    <div class="theme-grid" id="themeGrid"></div>
+
+    <!-- 自定义背景 -->
+    <label style="margin-top:14px">自定义背景</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="bgUrl" placeholder="图片或视频 URL..." style="flex:1">
+      <button class="btn-save" style="padding:8px 14px" onclick="applyBg()">应用</button>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <select id="bgType" style="background:var(--bg-card);color:#fff;border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px">
+        <option value="image">图片</option>
+        <option value="video">视频</option>
+      </select>
+      <select id="bgMode" style="background:var(--bg-card);color:#fff;border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px" onchange="updateBgMode()">
+        <option value="full">全屏显示</option>
+        <option value="chat">仅聊天区</option>
+      </select>
+      <select id="bgSize" style="background:var(--bg-card);color:#fff;border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px" onchange="applyBgSize()">
+        <option value="cover">填充 (cover)</option>
+        <option value="contain">适配 (contain)</option>
+        <option value="auto">原始大小</option>
+        <option value="100% 100%">拉伸</option>
+      </select>
+    </div>
+    <button class="btn-cancel" style="margin-top:6px;padding:6px 12px;font-size:12px" onclick="clearBg()">清除背景</button>
+
+    <!-- 透明度 -->
+    <label style="margin-top:14px">面板透明度</label>
+    <div class="slider-row"><span>侧边栏</span><input type="range" id="opPanel" min="20" max="100" value="100" oninput="applyTransparency()"><span id="valPanel">100%</span></div>
+    <div class="slider-row"><span>顶栏</span><input type="range" id="opHeader" min="20" max="100" value="100" oninput="applyTransparency()"><span id="valHeader">100%</span></div>
+    <div class="slider-row"><span>输入框</span><input type="range" id="opInput" min="20" max="100" value="100" oninput="applyTransparency()"><span id="valInput">100%</span></div>
+
+    <!-- 边框 -->
+    <label style="margin-top:14px">边框设置</label>
+    <div class="slider-row"><span>粗细</span><input type="range" id="borderW" min="0" max="6" value="1" step="0.5" oninput="applyBorder()"><span id="valBorderW">1px</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+      <span style="font-size:12px;color:var(--text-dim)">颜色</span>
+      <input type="color" id="borderColor" value="#1f1f40" onchange="applyBorder()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
+      <button class="btn-save" onclick="resetTheme()">恢复默认</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
@@ -1058,9 +1155,233 @@ document.addEventListener('keydown', function(e){
   }
 });
 
+// ==================== THEME SYSTEM ====================
+const PRESETS = {
+  cyber:{name:'赛博霓虹',colors:{'--bg-deep':'#0a0a14','--bg-panel':'#0f0f23','--bg-card':'#151530','--accent':'#00d4ff','--accent2':'#7b2fff','--accent3':'#ff2d95','--text':'#d0d0e0','--text-dim':'#707090','--border':'#1f1f40','--user-bg':'linear-gradient(135deg,#7b2fff,#5b1fcf)','--ai-bg':'linear-gradient(135deg,#0f0f2a,#15153a)'}},
+  gold:{name:'午夜鎏金',colors:{'--bg-deep':'#0d0d0d','--bg-panel':'#1a1a0f','--bg-card':'#252510','--accent':'#ffc800','--accent2':'#c8960c','--accent3':'#ff6b35','--text':'#e0d8c0','--text-dim':'#888060','--border':'#3a3520','--user-bg':'linear-gradient(135deg,#c8960c,#8a660c)','--ai-bg':'linear-gradient(135deg,#1a1a0f,#252515)'}},
+  forest:{name:'深林幽绿',colors:{'--bg-deep':'#0a140a','--bg-panel':'#0f1f0f','--bg-card':'#152815','--accent':'#00e676','--accent2':'#1b8a3b','--accent3':'#69f0ae','--text':'#c0e0c0','--text-dim':'#508050','--border':'#1a3a1a','--user-bg':'linear-gradient(135deg,#1b8a3b,#0f5f1f)','--ai-bg':'linear-gradient(135deg,#0f1f0f,#152a15)'}},
+  arctic:{name:'极冰蓝白',colors:{'--bg-deep':'#081018','--bg-panel':'#0c1a28','--bg-card':'#102840','--accent':'#40c8ff','--accent2':'#1868c0','--accent3':'#80e0ff','--text':'#c8ddf0','--text-dim':'#6078a0','--border':'#183050','--user-bg':'linear-gradient(135deg,#1868c0,#104080)','--ai-bg':'linear-gradient(135deg,#0c1a28,#103040)'}},
+  sunset:{name:'落日熔金',colors:{'--bg-deep':'#140a08','--bg-panel':'#1f1008','--bg-card':'#2a1508','--accent':'#ff6d3a','--accent2':'#d4441c','--accent3':'#ffab00','--text':'#f0d8c0','--text-dim':'#a07050','--border':'#3a1a10','--user-bg':'linear-gradient(135deg,#d4441c,#a02a10)','--ai-bg':'linear-gradient(135deg,#1f1008,#2a1808)'}},
+  matrix:{name:'矩阵终端',colors:{'--bg-deep':'#000a00','--bg-panel':'#001a00','--bg-card':'#002800','--accent':'#00ff41','--accent2':'#00cc33','--accent3':'#66ff99','--text':'#ccffcc','--text-dim':'#338833','--border':'#003300','--user-bg':'linear-gradient(135deg,#00cc33,#008020)','--ai-bg':'linear-gradient(135deg,#001a00,#002800)'}},
+  lavender:{name:'薰衣草梦境',colors:{'--bg-deep':'#100a18','--bg-panel':'#1a1028','--bg-card':'#251838','--accent':'#c084fc','--accent2':'#8b3fcf','--accent3':'#f472b6','--text':'#d8c8f0','--text-dim':'#8068a0','--border':'#2a1850','--user-bg':'linear-gradient(135deg,#8b3fcf,#6b1fa0)','--ai-bg':'linear-gradient(135deg,#1a1028,#251840)'}},
+};
+
+let currentTheme = 'cyber';
+let themeSettings = {};
+
+function applyTheme(name){
+  const preset = PRESETS[name];
+  if(!preset) return;
+  currentTheme = name;
+  const root = document.documentElement;
+  Object.entries(preset.colors).forEach(([k,v])=>{ root.style.setProperty(k,v); });
+  // Reset custom bg
+  root.style.setProperty('--bg-image','none');
+  document.querySelector('.bg-video')?.remove();
+  document.getElementById('bgUrl').value = '';
+  themeSettings.bgUrl = '';
+  themeSettings.bgType = 'image';
+  themeSettings.bgMode = 'full';
+  saveTheme();
+  renderThemeGrid();
+  updateSliders();
+}
+
+function saveTheme(){
+  const root = document.documentElement;
+  themeSettings.theme = currentTheme;
+  themeSettings.bgUrl = document.getElementById('bgUrl').value;
+  themeSettings.bgType = document.getElementById('bgType').value;
+  themeSettings.bgMode = document.getElementById('bgMode').value;
+  themeSettings.bgSize = document.getElementById('bgSize').value;
+  themeSettings.opPanel = document.getElementById('opPanel').value;
+  themeSettings.opHeader = document.getElementById('opHeader').value;
+  themeSettings.opInput = document.getElementById('opInput').value;
+  themeSettings.borderW = document.getElementById('borderW').value;
+  themeSettings.borderColor = root.style.getPropertyValue('--border') || document.getElementById('borderColor').value;
+  localStorage.setItem('themeSettings', JSON.stringify(themeSettings));
+}
+
+function loadTheme(){
+  const saved = localStorage.getItem('themeSettings');
+  if(saved){
+    try{
+      themeSettings = JSON.parse(saved);
+      if(themeSettings.theme && PRESETS[themeSettings.theme]){
+        applyTheme(themeSettings.theme);
+      }
+      // Restore custom settings
+      if(themeSettings.bgUrl) applyBgFromSaved();
+      if(themeSettings.opPanel) document.getElementById('opPanel').value = themeSettings.opPanel;
+      if(themeSettings.opHeader) document.getElementById('opHeader').value = themeSettings.opHeader;
+      if(themeSettings.opInput) document.getElementById('opInput').value = themeSettings.opInput;
+      if(themeSettings.borderW) document.getElementById('borderW').value = themeSettings.borderW;
+      if(themeSettings.borderColor) document.getElementById('borderColor').value = themeSettings.borderColor;
+      if(themeSettings.bgType) document.getElementById('bgType').value = themeSettings.bgType;
+      if(themeSettings.bgMode) document.getElementById('bgMode').value = themeSettings.bgMode;
+      if(themeSettings.bgSize) document.getElementById('bgSize').value = themeSettings.bgSize;
+      applyTransparency();
+      applyBorder();
+      updateBgMode();
+    }catch(e){}
+  }
+  renderThemeGrid();
+  updateSliders();
+}
+
+function applyBgFromSaved(){
+  document.getElementById('bgUrl').value = themeSettings.bgUrl||'';
+  applyBg();
+}
+
+function applyBg(){
+  const url = document.getElementById('bgUrl').value.trim();
+  const type = document.getElementById('bgType').value;
+  const mode = document.getElementById('bgMode').value;
+  const root = document.documentElement;
+  themeSettings.bgUrl = url;
+  themeSettings.bgType = type;
+  themeSettings.bgMode = mode;
+
+  // Remove old video
+  document.querySelector('.bg-video')?.remove();
+
+  if(!url){ root.style.setProperty('--bg-image','none'); saveTheme(); return; }
+
+  if(type==='video'){
+    const video = document.createElement('video');
+    video.className = 'bg-video';
+    video.src = url; video.autoplay = true; video.loop = true; video.muted = true;
+    video.playsInline = true;
+    video.style.display = mode==='full'?'block':'none';
+    document.body.appendChild(video);
+    root.style.setProperty('--bg-image','none');
+  } else {
+    root.style.setProperty('--bg-image','url('+url+')');
+  }
+  updateBgMode();
+  saveTheme();
+}
+
+function updateBgMode(){
+  const mode = document.getElementById('bgMode').value;
+  const root = document.documentElement;
+  root.style.setProperty('--bg-mode',mode);
+  const video = document.querySelector('.bg-video');
+  if(video) video.style.display = mode==='full'?'block':'none';
+  // Chat-only bg layer
+  const main = document.querySelector('.main');
+  if(mode==='chat' && root.style.getPropertyValue('--bg-image')!=='none'){
+    if(!document.querySelector('.chat-bg-layer')){
+      const layer = document.createElement('div');
+      layer.className = 'chat-bg-layer';
+      main.insertBefore(layer, main.firstChild);
+    }
+    document.querySelector('.chat-bg-layer').style.display = 'block';
+  } else {
+    const layer = document.querySelector('.chat-bg-layer');
+    if(layer) layer.style.display = 'none';
+  }
+  saveTheme();
+}
+
+function applyBgSize(){
+  const size = document.getElementById('bgSize').value;
+  document.documentElement.style.setProperty('--bg-size',size);
+  saveTheme();
+}
+
+function clearBg(){
+  document.getElementById('bgUrl').value = '';
+  document.documentElement.style.setProperty('--bg-image','none');
+  document.querySelector('.bg-video')?.remove();
+  const layer = document.querySelector('.chat-bg-layer');
+  if(layer) layer.style.display = 'none';
+  themeSettings.bgUrl = '';
+  saveTheme();
+}
+
+function applyTransparency(){
+  const opP = document.getElementById('opPanel').value;
+  const opH = document.getElementById('opHeader').value;
+  const opI = document.getElementById('opInput').value;
+  document.documentElement.style.setProperty('--panel-opacity',opP/100);
+  document.documentElement.style.setProperty('--header-opacity',opH/100);
+  document.documentElement.style.setProperty('--input-opacity',opI/100);
+  document.getElementById('valPanel').textContent = opP+'%';
+  document.getElementById('valHeader').textContent = opH+'%';
+  document.getElementById('valInput').textContent = opI+'%';
+  saveTheme();
+}
+
+function applyBorder(){
+  const w = document.getElementById('borderW').value;
+  const c = document.getElementById('borderColor').value;
+  document.documentElement.style.setProperty('--border-width',w+'px');
+  document.documentElement.style.setProperty('--border',c);
+  document.getElementById('valBorderW').textContent = w+'px';
+  saveTheme();
+}
+
+function updateSliders(){
+  document.getElementById('valPanel').textContent = document.getElementById('opPanel').value+'%';
+  document.getElementById('valHeader').textContent = document.getElementById('opHeader').value+'%';
+  document.getElementById('valInput').textContent = document.getElementById('opInput').value+'%';
+  document.getElementById('valBorderW').textContent = document.getElementById('borderW').value+'px';
+}
+
+function resetTheme(){
+  applyTheme('cyber');
+  clearBg();
+  document.documentElement.style.setProperty('--panel-opacity','1');
+  document.documentElement.style.setProperty('--header-opacity','1');
+  document.documentElement.style.setProperty('--input-opacity','1');
+  document.documentElement.style.setProperty('--border-width','1px');
+  document.getElementById('opPanel').value = 100;
+  document.getElementById('opHeader').value = 100;
+  document.getElementById('opInput').value = 100;
+  document.getElementById('borderW').value = 1;
+  document.getElementById('borderColor').value = '#1f1f40';
+  updateSliders();
+  applyBorder();
+}
+
+function renderThemeGrid(){
+  const grid = document.getElementById('themeGrid');
+  grid.innerHTML = '';
+  Object.entries(PRESETS).forEach(([key,preset])=>{
+    const c = preset.colors;
+    const div = document.createElement('div');
+    div.className = 'theme-card' + (key===currentTheme?' active':'');
+    div.innerHTML = `<div class="tc-preview">
+      <span class="tc-dot" style="background:${c['--accent']}"></span>
+      <span class="tc-dot" style="background:${c['--accent2']}"></span>
+      <span class="tc-dot" style="background:${c['--accent3']}"></span>
+    </div>${preset.name}`;
+    div.onclick = ()=>applyTheme(key);
+    grid.appendChild(div);
+  });
+}
+
+function openThemeModal(){
+  document.getElementById('themeModal').style.display = 'flex';
+  renderThemeGrid();
+  updateSliders();
+}
+
+function closeThemeModal(){
+  document.getElementById('themeModal').style.display = 'none';
+}
+document.getElementById('themeModal').addEventListener('click', function(e){
+  if(e.target===this) closeThemeModal();
+});
+
 // ==================== INIT ====================
 async function init(){
-  // 先从 localStorage 恢复上次选择
+  // 先加载主题
+  loadTheme();
+
+  // 从 localStorage 恢复上次选择
   currentRoleId = localStorage.getItem('lastRoleId') || '';
   currentModel = localStorage.getItem('lastModel') || 'deepseek';
   currentTtsVoice = localStorage.getItem('ttsVoice') || 'xiaoxiao';
