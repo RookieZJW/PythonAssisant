@@ -1,13 +1,7 @@
-"""语音合成 (TTS) API — 支持 edge-tts + 火山引擎 + 腾讯云"""
-import subprocess
-import tempfile
-import os
+"""语音合成 (TTS) API — 火山引擎 + 腾讯云"""
 import base64
 import requests
-import json
 import hashlib
-import hmac
-import time
 from flask import Blueprint, request
 from app.config.settings import settings
 from app.utils.response import success, error
@@ -15,14 +9,6 @@ from app.utils.response import success, error
 voice_bp = Blueprint('voice', __name__)
 
 # ====== 音色库 ======
-EDGE_VOICES = {
-    "e-xiaoxiao": {"name": "zh-CN-XiaoxiaoNeural", "label": "晓晓 (Edge·女·温柔)", "engine": "edge"},
-    "e-yunxi":   {"name": "zh-CN-YunxiNeural",   "label": "云希 (Edge·男·阳光)", "engine": "edge"},
-    "e-xiaoyi":  {"name": "zh-CN-XiaoyiNeural",  "label": "晓伊 (Edge·女·活泼)", "engine": "edge"},
-    "e-yunyang": {"name": "zh-CN-YunyangNeural", "label": "云扬 (Edge·男·沉稳)", "engine": "edge"},
-    "e-yunxia":  {"name": "zh-CN-YunxiaNeural",   "label": "云夏 (Edge·男·活泼)", "engine": "edge"},
-}
-
 VOLCANO_VOICES = {
     "v-xiaoyuan": {"name": "BV700_streaming", "label": "小源 (火山·V2女声)", "engine": "volcano"},
     "v-daxia":   {"name": "BV701_streaming", "label": "大夏 (火山·V2男声)", "engine": "volcano"},
@@ -42,31 +28,11 @@ TENCENT_VOICES = {
     "t-zhiyun":   {"name": "1051", "label": "智云 (腾讯·精品男声)", "engine": "tencent"},
 }
 
-VOICES = {**EDGE_VOICES, **VOLCANO_VOICES, **TENCENT_VOICES}
-DEFAULT_VOICE = "v-xiaoyuan" if settings.VOLCANO_TTS_TOKEN else "e-xiaoxiao"
+VOICES = {**VOLCANO_VOICES, **TENCENT_VOICES}
+DEFAULT_VOICE = "v-xiaoyuan"
 
 
 # ====== TTS 引擎实现 ======
-
-def _tts_edge(text, voice, rate="+5%"):
-    """Microsoft Edge TTS"""
-    tmp_path = None
-    try:
-        fd, tmp_path = tempfile.mkstemp(suffix='.mp3')
-        os.close(fd)
-        result = subprocess.run(
-            ["edge-tts", "--voice", voice, "--rate", rate,
-             "--text", text, "--write-media", tmp_path],
-            capture_output=True, text=True, timeout=30
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"edge-tts: {result.stderr[:200]}")
-        with open(tmp_path, 'rb') as f:
-            return f.read()
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-
 
 def _tts_volcano(text, voice):
     """火山引擎 TTS"""
@@ -134,7 +100,6 @@ def _tts_tencent(text, voice):
 
 
 TTS_ENGINES = {
-    "edge": _tts_edge,
     "volcano": _tts_volcano,
     "tencent": _tts_tencent,
 }
@@ -166,11 +131,7 @@ def tts():
         if not engine_fn:
             return error(f"未知引擎: {v['engine']}", 500)
 
-        extra = {}
-        if v["engine"] == "edge":
-            extra["rate"] = data.get("rate", "+5%")
-
-        audio_bytes = engine_fn(text, v["name"], **extra)
+        audio_bytes = engine_fn(text, v["name"])
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
         return success({
@@ -181,10 +142,6 @@ def tts():
             "engine": v["engine"],
             "text_length": len(text),
         })
-    except subprocess.TimeoutExpired:
-        return error("语音合成超时", 500)
-    except FileNotFoundError:
-        return error("edge-tts 未安装: pip install edge-tts", 500)
     except Exception as e:
         return error(f"语音合成失败: {str(e)}", 500)
 
