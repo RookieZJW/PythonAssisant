@@ -22,6 +22,9 @@ logs/*.log
 .vscode/
 .idea/
 
+# 临时测试文件
+test_*.py
+
 # 系统
 .DS_Store
 Thumbs.db
