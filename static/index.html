@@ -514,12 +514,17 @@ function renderRoleSelect(){
     const opt = document.createElement('option');
     opt.value = r.id;
     opt.textContent = r.icon+' '+r.name;
-    if(r.id===currentRoleId) opt.selected = true;
     sel.appendChild(opt);
   });
-  if(!currentRoleId && roles.length>0){
-    currentRoleId = roles[0].id;
+  // 恢复选中：先检查保存的 ID 是否在角色列表中
+  const found = roles.find(r=>r.id===currentRoleId);
+  if(found){
     sel.value = currentRoleId;
+  } else {
+    // 角色已被删除或首次加载，默认选第一个
+    currentRoleId = roles[0]?.id || '';
+    sel.value = currentRoleId;
+    localStorage.setItem('lastRoleId', currentRoleId);
   }
 }
 
@@ -565,14 +570,17 @@ async function saveRole(){
   const prompt = document.getElementById('rolePrompt').value.trim();
   if(!name||!prompt){alert('请填写角色名称和提示词');return;}
 
+  let newRoleId = id;
   if(id){
     await api('PUT','/roles/'+id,{name,prompt,icon:selectedIcon});
   } else {
-    await api('POST','/roles',{name,prompt,icon:selectedIcon});
+    const resp = await api('POST','/roles',{name,prompt,icon:selectedIcon});
+    if(resp.code===200) newRoleId = resp.data.id;
   }
   closeRoleModal();
   await loadRoles();
-  currentRoleId = roles[roles.length-1].id;
+  // 用 API 返回的准确 ID 定位新角色
+  currentRoleId = newRoleId || (roles.length>0 ? roles[roles.length-1].id : '');
   localStorage.setItem('lastRoleId', currentRoleId);
   renderRoleSelect();
   newConversation();
