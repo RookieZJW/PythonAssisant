@@ -451,6 +451,8 @@ body::before{
     <div class="voice-settings">
       <span style="font-size:11px;color:var(--text-dim)">TTS:</span>
       <select id="voiceSelect" onchange="changeVoice()"></select>
+      <button class="header-btn" onclick="speakLastMsg()" title="朗读最后一条回复" style="font-size:11px;padding:4px 10px">🔊 朗读</button>
+      <button class="header-btn" onclick="stopSpeaking()" title="停止朗读" style="font-size:11px;padding:4px 10px">⏹ 停止</button>
       <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer">
         <input type="checkbox" id="autoSpeak" checked> 自动朗读
       </label>
@@ -838,6 +840,9 @@ async function switchConversation(convId){
     const msgs = data.data.messages || [];
     const icon = convRoleIcon || getAssistantIcon();
     msgs.forEach(m=>addMsg(m.role, m.content, false, m.role==='assistant'?icon:null));
+    // 追踪最后一条 AI 回复，供手动朗读
+    const lastAi = msgs.filter(m=>m.role==='assistant').pop();
+    if(lastAi) lastAssistantText = lastAi.content;
     if(msgs.length===0){
       msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+icon+'</div><div class="msg-body"><div class="msg-bubble">继续对话吧～</div></div></div>';
     }
@@ -1010,8 +1015,15 @@ async function sendMessage(){
   }
   await loadConversations();
 
+  // Save for manual replay
+  if(fullText) lastAssistantText = fullText;
   // Auto-speak response
   if(fullText && autoSpeakCb.checked) speakText(fullText);
+}
+
+function speakLastMsg(){
+  if(isSpeaking){ stopSpeaking(); return; }
+  if(lastAssistantText) speakText(lastAssistantText);
 }
 
 // ==================== MODEL ====================
@@ -1049,6 +1061,7 @@ let recognition = null;
 let isListening = false;
 let isSpeaking = false;
 let currentTtsVoice = 'xiaoxiao';
+let lastAssistantText = '';
 let socket = null;
 
 // ---- Socket.IO ----
