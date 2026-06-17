@@ -1564,7 +1564,16 @@ toggleModel = function(){
   localStorage.setItem('lastModel', currentModel);
 };
 
-init();
+// 等 CDN 脚本加载完再初始化
+function boot(){
+  if(typeof marked==='undefined' || typeof hljs==='undefined'){
+    setTimeout(boot, 200);
+    return;
+  }
+  hljs.configure({languages:[]});  // 自动检测
+  init();
+}
+boot();
 </script>
 </body>
 </html>
