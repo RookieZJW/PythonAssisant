@@ -21,11 +21,9 @@ VOLCANO_VOICES = {
 }
 
 TENCENT_VOICES = {
-    "t-zhiling":  {"name": "1002", "label": "智聆 (腾讯·标准女声)", "engine": "tencent"},
     "t-zhiyu":    {"name": "1001", "label": "智瑜 (腾讯·情感女声)", "engine": "tencent"},
     "t-zhimei":   {"name": "1003", "label": "智美 (腾讯·客服女声)", "engine": "tencent"},
     "t-zhiling2": {"name": "1050", "label": "智聆 (腾讯·精品女声)", "engine": "tencent"},
-    "t-zhiyun":   {"name": "1051", "label": "智云 (腾讯·精品男声)", "engine": "tencent"},
 }
 
 VOICES = {**VOLCANO_VOICES, **TENCENT_VOICES}
