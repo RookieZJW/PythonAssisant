@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麦克风测试</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#0a0a14;color:#d0d0e0;display:flex;justify-content:center;align-items:center;height:100vh}
+.test-card{background:#0f0f23;border:1px solid #1f1f40;border-radius:16px;padding:40px;text-align:center;max-width:500px;width:90%}
+h2{font-size:24px;margin-bottom:24px}
+.status{font-size:16px;padding:12px 20px;border-radius:8px;margin:16px 0;background:#151530}
+.status.ok{background:rgba(0,200,100,.15);color:#0c8}
+.status.err{background:rgba(255,60,60,.15);color:#f55}
+button{
+  padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;
+  border:none;margin:8px;transition:.2s
+}
+.btn-test{background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff}
+.btn-test:hover{box-shadow:0 0 20px rgba(0,212,255,.4)}
+.btn-stop{background:#ff2d95;color:#fff}
+.btn-stop:hover{box-shadow:0 0 20px rgba(255,45,149,.4)}
+.bar-container{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:120px;margin:20px 0}
+.bar{width:8px;background:linear-gradient(to top,#00d4ff,#7b2fff);border-radius:4px;transition:height .05s}
+.volume-text{font-size:13px;color:#707090}
+.info{font-size:12px;color:#707090;margin-top:16px;text-align:left;line-height:1.8}
+.info span{color:#00d4ff}
+</style>
+</head>
+<body>
+<div class="test-card">
+  <h2>🎤 麦克风测试</h2>
+  <div class="status" id="status">点击下方按钮开始测试</div>
+  <div class="bar-container" id="bars"></div>
+  <div class="volume-text" id="volumeText">等待测试...</div>
+  <div>
+    <button class="btn-test" id="btnTest" onclick="startTest()">🔴 开始测试</button>
+    <button class="btn-stop" id="btnStop" onclick="stopTest()" style="display:none">⏹ 停止</button>
+  </div>
+  <div class="info">
+    <p><span>✅ 看到彩色音量条跳动</span> = 麦克风正常</p>
+    <p><span>❌ 弹权限请求后无反应</span> = 权限被拒绝</p>
+    <p><span>❌ 提示"未找到设备"</span> = 麦克风未连接/驱动问题</p>
+    <p><span>💡 提示</span>：Chrome 需要 HTTPS 或 localhost 才能使用麦克风</p>
+  </div>
+</div>
+
+<script>
+let audioCtx = null;
+let analyser = null;
+let micStream = null;
+let animId = null;
+
+// 构建音量条
+const barsContainer = document.getElementById('bars');
+for(let i=0;i<32;i++){
+  const bar = document.createElement('div');
+  bar.className='bar';
+  bar.style.height='4px';
+  barsContainer.appendChild(bar);
+}
+
+async function startTest(){
+  const status = document.getElementById('status');
+  const volText = document.getElementById('volumeText');
+
+  try{
+    status.textContent = '正在请求麦克风权限...';
+    status.className = 'status';
+
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+
+    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    status.textContent = '✅ 麦克风已连接！请说话...';
+    status.className = 'status ok';
+
+    document.getElementById('btnTest').style.display = 'none';
+    document.getElementById('btnStop').style.display = 'inline-block';
+
+    function updateBars(){
+      analyser.getByteFrequencyData(dataArray);
+      const bars = barsContainer.children;
+      let total = 0;
+      for(let i=0;i<32;i++){
+        const val = dataArray[Math.floor(i * bufferLength / 32)];
+        const h = Math.max(4, val * 1.2);
+        bars[i].style.height = h + 'px';
+        total += val;
+      }
+      const avg = total / 32;
+      if(avg > 10){
+        volText.textContent = '音量: ' + (avg/2.56).toFixed(0) + '% — 麦克风正常 👍';
+      } else {
+        volText.textContent = '音量: 很低 — 请靠近麦克风说话';
+      }
+      animId = requestAnimationFrame(updateBars);
+    }
+    updateBars();
+
+  }catch(err){
+    console.error(err);
+    status.className = 'status err';
+    if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
+      status.textContent = '❌ 麦克风权限被拒绝，请在浏览器设置中允许';
+    } else if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError'){
+      status.textContent = '❌ 未检测到麦克风设备';
+    } else if(err.name === 'NotReadableError'){
+      status.textContent = '❌ 麦克风被其他应用占用';
+    } else {
+      status.textContent = '❌ 错误: ' + err.message;
+    }
+  }
+}
+
+function stopTest(){
+  if(animId) cancelAnimationFrame(animId);
+  if(micStream) micStream.getTracks().forEach(t=>t.stop());
+  if(audioCtx) audioCtx.close();
+  audioCtx = null;
+  analyser = null;
+  micStream = null;
+
+  document.getElementById('status').textContent = '测试已停止，点击按钮重新测试';
+  document.getElementById('status').className = 'status';
+  document.getElementById('volumeText').textContent = '等待测试...';
+  document.getElementById('btnTest').style.display = 'inline-block';
+  document.getElementById('btnStop').style.display = 'none';
+
+  const bars = barsContainer.children;
+  for(let i=0;i<bars.length;i++) bars[i].style.height = '4px';
+}
+</script>
+</body>
+</html>

@@ -27,7 +27,10 @@ def _seed_builtin_roles(app):
 
 def create_app(config_name=None):
     """应用工厂函数"""
-    app = Flask(__name__)
+    import os as _os
+    app = Flask(__name__,
+                static_folder=_os.path.join(_os.path.dirname(__file__), '..', 'static'),
+                static_url_path='/static')
 
     # 加载配置
     app.config.from_object(settings)
