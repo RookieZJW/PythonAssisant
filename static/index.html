@@ -575,9 +575,12 @@ async function saveRole(){
 
   let newRoleId = id;
   if(id){
-    await api('PUT','/roles/'+id,{name,prompt,icon:selectedIcon});
+    const resp = await api('PUT','/roles/'+id,{name,prompt,icon:selectedIcon});
+    if(resp.code===409){ alert(resp.message); return; }
+    if(resp.code!==200){ alert('更新失败: '+resp.message); return; }
   } else {
     const resp = await api('POST','/roles',{name,prompt,icon:selectedIcon});
+    if(resp.code===409){ alert(resp.message); return; }
     if(resp.code===200) newRoleId = resp.data.id;
   }
   closeRoleModal();
@@ -594,26 +597,26 @@ async function saveRole(){
 function editCurrentRole(){
   const role = roles.find(r=>r.id===currentRoleId);
   if(!role) return;
-  if(role.is_builtin){ alert('内置角色不可编辑，请用"＋ 角色"创建新角色后编辑'); return; }
+  if(roles.length <= 1){ alert('至少保留一个角色'); return; }
   openRoleModal(role);
 }
 
 async function deleteCurrentRole(){
   const role = roles.find(r=>r.id===currentRoleId);
   if(!role) return;
-  if(role.is_builtin){ alert('内置角色不可删除'); return; }
+  if(roles.length <= 1){ alert('至少保留一个角色，不能删除最后一个'); return; }
   if(!confirm('确定删除角色 "'+role.name+'"？此操作不可恢复。')) return;
 
   const resp = await api('DELETE','/roles/'+role.id);
   if(resp.code===200){
     await loadRoles();
-    // 切换到第一个角色
     if(roles.length>0){
       currentRoleId = roles[0].id;
       localStorage.setItem('lastRoleId', currentRoleId);
       roleSelect.value = currentRoleId;
     }
     renderRoleSelect();
+    updateRoleButtons();
     newConversation();
   } else {
     alert('删除失败: '+resp.message);
@@ -622,9 +625,10 @@ async function deleteCurrentRole(){
 
 function updateRoleButtons(){
   const role = roles.find(r=>r.id===currentRoleId);
-  const isCustom = role && !role.is_builtin;
-  document.getElementById('btnEditRole').style.display = isCustom ? '' : 'none';
-  document.getElementById('btnDelRole').style.display = isCustom ? '' : 'none';
+  const hasRole = !!role;
+  const canDelete = hasRole && roles.length > 1;
+  document.getElementById('btnEditRole').style.display = hasRole ? '' : 'none';
+  document.getElementById('btnDelRole').style.display = canDelete ? '' : 'none';
 }
 
 roleSelect.addEventListener('dblclick', function(){
