@@ -12,7 +12,8 @@ if __name__ == '__main__':
     # 开发环境启动
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('FLASK_ENV', 'development') == 'development'
+    # 关闭 debug 自动重载（Windows 下容易缓存旧代码）
+    debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
 
     # 使用 SocketIO 启动（兼容 WebSocket + HTTP）
     socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
