@@ -873,7 +873,7 @@ function getAssistantIcon(){
 }
 
 function renderMd(text){
-  if(typeof marked==='undefined') return escHtml(text);
+  if(typeof marked==='undefined'){ console.warn('[MD] marked not loaded'); return escHtml(text); }
   try{
     // 配置 marked
     if(!marked._configured){
@@ -965,7 +965,6 @@ async function sendMessage(){
     typingRow.remove();
     const bubble = addMsg('assistant','',false);
     let stopped = false;
-    let renderTick = 0;
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -982,12 +981,8 @@ async function sendMessage(){
         if(data==='[DONE]'){stopped=true;break readLoop}
         if(data.startsWith('[ERROR]')){fullText='⚠ '+data.substring(7);stopped=true;break readLoop}
         fullText += data;
-        // 每 3 个 chunk 实时渲染一次
-        renderTick++;
-        if(renderTick % 3 === 0 || data.includes('\n')){
-          bubble.innerHTML = renderMd(fullText);
-          msgBox.scrollTop = msgBox.scrollHeight;
-        }
+        bubble.innerHTML = renderMd(fullText);
+        msgBox.scrollTop = msgBox.scrollHeight;
       }
     }
     if(!stopped) try{reader.cancel()}catch(e){}
