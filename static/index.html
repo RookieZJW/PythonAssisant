@@ -531,11 +531,7 @@ function renderRoleSelect(){
 function switchRole(){
   currentRoleId = roleSelect.value;
   localStorage.setItem('lastRoleId', currentRoleId);
-  // 更新页面上已有的助手头像
-  document.querySelectorAll('#messages .msg-row.assistant .msg-avatar').forEach(el=>{
-    el.textContent = getAssistantIcon();
-  });
-  newConversation();
+  newConversation();  // 清屏 + 创建新会话，不碰历史消息
 }
 
 // ==================== ROLE MODAL ====================
@@ -636,24 +632,27 @@ async function switchConversation(convId){
 
   // 恢复该会话绑定的角色
   const conv = conversations.find(c=>c.id===convId);
+  let convRoleIcon = null;
   if(conv && conv.role_id){
     const role = roles.find(r=>r.id===conv.role_id);
     if(role){
       currentRoleId = conv.role_id;
       localStorage.setItem('lastRoleId', currentRoleId);
       roleSelect.value = currentRoleId;
+      convRoleIcon = role.icon;
     }
   }
 
   renderConvList();
-  // Load messages
+  // Load messages — 用会话绑定的角色图标，不随下拉框变化
   const data = await api('GET','/conversations/'+convId);
   if(data.code===200){
     msgBox.innerHTML = '';
     const msgs = data.data.messages || [];
-    msgs.forEach(m=>addMsg(m.role, m.content, false));
+    const icon = convRoleIcon || getAssistantIcon();
+    msgs.forEach(m=>addMsg(m.role, m.content, false, m.role==='assistant'?icon:null));
     if(msgs.length===0){
-      msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+getAssistantIcon()+'</div><div class="msg-body"><div class="msg-bubble">继续对话吧～</div></div></div>';
+      msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+icon+'</div><div class="msg-body"><div class="msg-bubble">继续对话吧～</div></div></div>';
     }
     msgBox.scrollTop = msgBox.scrollHeight;
   }
@@ -681,10 +680,17 @@ function getAssistantIcon(){
   return role ? role.icon : '🤖';
 }
 
-function addMsg(role, content, scroll=true){
+function addMsg(role, content, scroll=true, iconOverride=null){
   const row = document.createElement('div');
   row.className = 'msg-row '+role;
-  const avatar = role==='user'?'👤':role==='assistant'?getAssistantIcon():'';
+  let avatar;
+  if(role==='user'){
+    avatar = '👤';
+  } else if(iconOverride){
+    avatar = iconOverride;
+  } else {
+    avatar = getAssistantIcon();
+  }
   const time = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
