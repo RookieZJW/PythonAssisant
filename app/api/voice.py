@@ -119,8 +119,8 @@ def tts():
 
     if not text:
         return error("text 参数不能为空", 400)
-    if len(text) > 5000:
-        return error("文本过长，请控制在 5000 字以内", 400)
+    if len(text) > 300:
+        return error("文本过长，请控制在 300 字以内", 400)
 
     v = VOICES.get(voice_key)
     if not v:

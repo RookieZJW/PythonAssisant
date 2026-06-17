@@ -1184,9 +1184,10 @@ function stopListening(){
 // ---- TTS Playback ----
 async function speakText(text){
   if(!text || !autoSpeakCb.checked) return;
-  if(text.length > 5000) text = text.substring(0, 5000);
+  // 腾讯云限制 150 字，火山支持更长。统一截到 300 字安全线
+  if(text.length > 300) text = text.substring(0, 300);
 
-  stopSpeaking();  // stop any ongoing speech first
+  stopSpeaking();
   isSpeaking = true;
 
   try{
