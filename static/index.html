@@ -73,11 +73,14 @@ body::before{
 /* ========== Sidebar ========== */
 .sidebar{
   width:280px; min-width:280px; height:100vh;
-  background:var(--bg-panel); z-index:10;
-  display:flex; flex-direction:column;
+  z-index:10; display:flex; flex-direction:column;
   border-right:var(--border-width) solid var(--border);
   transition:transform var(--transition);
-  opacity:var(--panel-opacity);
+  position:relative; background:transparent;
+}
+.sidebar::before{
+  content:''; position:absolute; inset:0; z-index:-1;
+  background:var(--bg-panel); opacity:var(--panel-opacity);
 }
 .sidebar-header{
   padding:20px; border-bottom:1px solid var(--border);
@@ -135,11 +138,14 @@ body::before{
   min-width:0;
 }
 .chat-header{
-  padding:16px 24px; background:var(--bg-panel);
-  border-bottom:var(--border-width) solid var(--border);
+  padding:16px 24px; border-bottom:var(--border-width) solid var(--border);
   display:flex; align-items:center; gap:12px;
   backdrop-filter:blur(20px);
-  opacity:var(--header-opacity);
+  position:relative; background:transparent;
+}
+.chat-header::before{
+  content:''; position:absolute; inset:0; z-index:-1;
+  background:var(--bg-panel); opacity:var(--header-opacity);
 }
 .chat-header select{
   background:var(--bg-card); color:#fff; border:1px solid var(--border);
@@ -216,9 +222,13 @@ body::before{
 
 /* ========== Input Area ========== */
 .chat-input-area{
-  padding:16px 24px 20px; background:var(--bg-panel);
+  padding:16px 24px 20px;
   border-top:var(--border-width) solid var(--border);
-  opacity:var(--input-opacity);
+  position:relative; background:transparent;
+}
+.chat-input-area::before{
+  content:''; position:absolute; inset:0; z-index:-1;
+  background:var(--bg-panel); opacity:var(--input-opacity);
 }
 .input-row{display:flex; gap:12px; align-items:flex-end}
 .input-wrapper{
