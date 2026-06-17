@@ -14,8 +14,9 @@ def create_conversation():
     title = data.get('title', '新对话')
     model = data.get('model', 'deepseek')
     user_id = data.get('user_id', 'anonymous')
+    role_id = data.get('role_id', None)
 
-    conversation = Conversation.create(title=title, model=model, user_id=user_id)
+    conversation = Conversation.create(title=title, model=model, user_id=user_id, role_id=role_id)
     return success(conversation.to_dict(), "会话创建成功")
 
 

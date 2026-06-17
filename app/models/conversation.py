@@ -10,6 +10,7 @@ class Conversation(db.Model):
     title = db.Column(db.String(200), nullable=False, default="新对话")
     user_id = db.Column(db.String(64), index=True, default="anonymous")
     model = db.Column(db.String(32), default="deepseek")
+    role_id = db.Column(db.String(36), nullable=True, default=None)  # 关联角色
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False)
@@ -22,18 +23,19 @@ class Conversation(db.Model):
     )
 
     @classmethod
-    def create(cls, title="新对话", model="deepseek", user_id="anonymous"):
+    def create(cls, title="新对话", model="deepseek", user_id="anonymous", role_id=None):
         conversation = cls(
             title=title,
             model=model,
             user_id=user_id,
+            role_id=role_id,
         )
         db.session.add(conversation)
         db.session.commit()
         return conversation
 
     @classmethod
-    def get_or_create(cls, conversation_id):
+    def get_or_create(cls, conversation_id, role_id=None):
         """获取或创建会话"""
         if conversation_id and conversation_id != "default":
             conversation = cls.query.filter_by(
@@ -43,7 +45,7 @@ class Conversation(db.Model):
             if conversation:
                 return conversation
 
-        return cls.create()
+        return cls.create(role_id=role_id)
 
     @classmethod
     def get_list(cls, user_id="anonymous", page=1, page_size=20):
@@ -73,6 +75,7 @@ class Conversation(db.Model):
             "id": self.id,
             "title": self.title,
             "model": self.model,
+            "role_id": self.role_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

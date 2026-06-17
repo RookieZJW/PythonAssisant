@@ -23,6 +23,7 @@ def chat():
             user_input=data['message'],
             model_type=data.get('model'),
             system_prompt=data.get('system_prompt'),
+            role_id=data.get('role_id'),
         )
         return success(result)
     except ValueError as e:
@@ -42,12 +43,13 @@ def chat_stream():
     user_input = data['message']
     model_type = data.get('model')
     system_prompt = data.get('system_prompt')
+    role_id = data.get('role_id')
 
     def generate():
         try:
             # 准备上下文
             conversation, memory, messages = ChatService.prepare_chat_context(
-                conversation_id, user_input, model_type, system_prompt
+                conversation_id, user_input, model_type, system_prompt, role_id
             )
 
             # 调用模型流式输出

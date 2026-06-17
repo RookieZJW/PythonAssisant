@@ -18,10 +18,11 @@ class ChatService:
 
     @staticmethod
     def chat(conversation_id: str, user_input: str,
-             model_type: str = None, system_prompt: str = None):
+             model_type: str = None, system_prompt: str = None,
+             role_id: str = None):
         """同步对话接口"""
-        # 1. 获取或创建会话
-        conversation = Conversation.get_or_create(conversation_id)
+        # 1. 获取或创建会话（首次创建时绑定角色）
+        conversation = Conversation.get_or_create(conversation_id, role_id=role_id)
 
         # 2. 初始化记忆并加载历史
         memory = ConversationMemory(conversation.id, k=10)
@@ -60,9 +61,10 @@ class ChatService:
 
     @staticmethod
     def prepare_chat_context(conversation_id: str, user_input: str,
-                             model_type: str = None, system_prompt: str = None):
+                             model_type: str = None, system_prompt: str = None,
+                             role_id: str = None):
         """准备对话上下文（供流式接口使用）"""
-        conversation = Conversation.get_or_create(conversation_id)
+        conversation = Conversation.get_or_create(conversation_id, role_id=role_id)
         memory = ConversationMemory(conversation.id, k=10)
         history_messages = Message.get_history(conversation.id, limit=20)
         memory.load_history(history_messages)

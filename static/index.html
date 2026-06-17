@@ -610,10 +610,13 @@ function renderConvList(){
     return;
   }
   conversations.forEach(c=>{
+    // 查找该会话对应的角色图标
+    const convRole = (c.role_id && roles.find(r=>r.id===c.role_id)) || null;
+    const icon = convRole ? convRole.icon : '💬';
     const div = document.createElement('div');
     div.className = 'conv-item' + (c.id===currentConvId?' active':'');
     div.innerHTML = `
-      <span class="conv-icon">💬</span>
+      <span class="conv-icon">${icon}</span>
       <span class="conv-title">${escHtml(c.title||'新对话')}</span>
       <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</span>
     `;
@@ -630,6 +633,18 @@ function escHtml(s){
 
 async function switchConversation(convId){
   currentConvId = convId;
+
+  // 恢复该会话绑定的角色
+  const conv = conversations.find(c=>c.id===convId);
+  if(conv && conv.role_id){
+    const role = roles.find(r=>r.id===conv.role_id);
+    if(role){
+      currentRoleId = conv.role_id;
+      localStorage.setItem('lastRoleId', currentRoleId);
+      roleSelect.value = currentRoleId;
+    }
+  }
+
   renderConvList();
   // Load messages
   const data = await api('GET','/conversations/'+convId);
@@ -714,7 +729,8 @@ async function sendMessage(){
         conversation_id: currentConvId,
         message: message,
         model: currentModel,
-        system_prompt: systemPrompt
+        system_prompt: systemPrompt,
+        role_id: currentRoleId
       })
     });
 
