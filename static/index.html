@@ -905,19 +905,47 @@ function getAssistantIcon(){
 }
 
 let _mdOk=!1;
-function renderMd(text){
+function renderMd(text, useMarked){
   if(!text) return '';
-  if(typeof marked==='undefined'){
-    if(!_mdOk){console.warn('[MD] marked.js 未加载'); _mdOk=!0;}
-    return escHtml(text);
+  // 优先使用 marked（如果可用且要求完整渲染）
+  if(useMarked && typeof marked!=='undefined'){
+    try{
+      if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
+      let h = marked.parse(text);
+      h = h.replace(/<pre><code( class="language-(\\w+)")?>/g,
+        '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
+      return h;
+    }catch(e){}
   }
-  try{
-    if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
-    let h = marked.parse(text);
-    h = h.replace(/<pre><code( class="language-(\\w+)")?>/g,
-      '<pre><span class="code-lang">$2</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code$1>');
-    return h;
-  }catch(e){return escHtml(text);}
+  // 内置简单 Markdown 渲染（永不失败，实时用）
+  let h = escHtml(text);
+  // 代码块 ```...```
+  h = h.replace(/```(\w*)\n([\\s\\S]*?)```/g, function(_,lang,code){
+    return '<pre><span class="code-lang">'+escHtml(lang)+'</span><button class="copy-btn" onclick="copyCode(this)">复制</button><code'+(lang?' class="language-'+lang+'"':'')+'>'+escHtml(code.trimEnd())+'</code></pre>';
+  });
+  // 行内代码 `...`
+  h = h.replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:3px;font-size:13px">$1</code>');
+  // 粗体 **...**
+  h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  // 斜体 *...*
+  h = h.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g,'<em>$1</em>');
+  // 标题
+  h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  h = h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // 链接 [text](url)
+  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  // 引用
+  h = h.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  // 列表
+  h = h.replace(/^\- (.+)$/gm,'<li>$1</li>');
+  h = h.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  // 水平线
+  h = h.replace(/^---$/gm,'<hr>');
+  // 换行
+  h = h.replace(/\n\n/g,'<br><br>');
+  h = h.replace(/\n/g,'<br>');
+  return h;
 }
 
 function copyCode(btn){
@@ -941,7 +969,7 @@ function addMsg(role, content, scroll=true, iconOverride=null){
   }
   const time = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
   // assistant 消息渲染 Markdown（历史消息用完整 marked 渲染）
-  const display = role==='assistant' ? renderMd(content) : escHtml(content);
+  const display = role==='assistant' ? renderMd(content, true) : escHtml(content);
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
@@ -1017,14 +1045,14 @@ async function sendMessage(){
         if(data==='[DONE]'){stopped=true;break readLoop}
         if(data.startsWith('[ERROR]')){fullText='⚠ '+data.substring(7);stopped=true;break readLoop}
         fullText += data;
-        bubble.innerHTML = renderMd(fullText);
+        bubble.innerHTML = renderMd(fullText,false);
         msgBox.scrollTop = msgBox.scrollHeight;
       }
     }
     if(!stopped) try{reader.cancel()}catch(e){}
     if(fullText){
       // 第一次渲染
-      bubble.innerHTML = renderMd(fullText);
+      bubble.innerHTML = renderMd(fullText, true);
       // 50ms 后强制再渲染一次
       const _ft = fullText, _b = bubble;
       setTimeout(()=>{
