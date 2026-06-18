@@ -1023,8 +1023,18 @@ async function sendMessage(){
     }
     if(!stopped) try{reader.cancel()}catch(e){}
     if(fullText){
+      // 第一次渲染
       bubble.innerHTML = renderMd(fullText);
-      if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+      // 50ms 后强制再渲染一次，确保 marked 完全生效
+      setTimeout(()=>{
+        if(typeof marked!=='undefined'){
+          try{
+            if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
+            bubble.innerHTML = marked.parse(fullText);
+          }catch(e){}
+        }
+        if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+      }, 50);
       // 更新 Token 显示
       const row = bubble.closest('.msg-row');
       if(row){ const ts = row.querySelector('.msg-tokens'); if(ts) ts.textContent = estimateTokens(fullText)+' Tokens'; }
