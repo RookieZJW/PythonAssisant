@@ -904,9 +904,13 @@ function getAssistantIcon(){
   return role ? role.icon : '🤖';
 }
 
+let _mdOk=!1;
 function renderMd(text){
   if(!text) return '';
-  if(typeof marked==='undefined') return escHtml(text);
+  if(typeof marked==='undefined'){
+    if(!_mdOk){console.warn('[MD] marked.js 未加载'); _mdOk=!0;}
+    return escHtml(text);
+  }
   try{
     if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
     let h = marked.parse(text);
@@ -1019,9 +1023,11 @@ async function sendMessage(){
     }
     if(!stopped) try{reader.cancel()}catch(e){}
     if(fullText){
-      // 最终用 marked 完整渲染 + 代码高亮
       bubble.innerHTML = renderMd(fullText);
       if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+      // 更新 Token 显示
+      const row = bubble.closest('.msg-row');
+      if(row){ const ts = row.querySelector('.msg-tokens'); if(ts) ts.textContent = estimateTokens(fullText)+' Tokens'; }
     } else {
       bubble.textContent='(空回复)';
     }
