@@ -1025,15 +1025,16 @@ async function sendMessage(){
     if(fullText){
       // 第一次渲染
       bubble.innerHTML = renderMd(fullText);
-      // 50ms 后强制再渲染一次，确保 marked 完全生效
+      // 50ms 后强制再渲染一次
+      const _ft = fullText, _b = bubble;
       setTimeout(()=>{
-        if(typeof marked!=='undefined'){
-          try{
-            if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
-            bubble.innerHTML = marked.parse(fullText);
-          }catch(e){}
-        }
-        if(typeof hljs!=='undefined') bubble.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
+        if(typeof marked==='undefined'){ console.warn('[MD] setTimeout: marked still missing'); return; }
+        try{
+          if(!marked._p){marked.setOptions({breaks:true,gfm:true});marked._p=1;}
+          _b.innerHTML = marked.parse(_ft);
+          console.log('[MD] setTimeout: rendered',_ft.length,'chars');
+        }catch(e){ console.error('[MD] setTimeout error:',e.message); }
+        if(typeof hljs!=='undefined') _b.querySelectorAll('pre code').forEach(x=>hljs.highlightElement(x));
       }, 50);
       // 更新 Token 显示
       const row = bubble.closest('.msg-row');
