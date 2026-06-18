@@ -70,3 +70,46 @@ def local_media():
         '.mov':'video/quicktime','.avi':'video/x-msvideo',
     }
     return send_file(filepath, mimetype=mime_map.get(ext, 'application/octet-stream'))
+
+
+@system_bp.route('/stats', methods=['GET'])
+def stats():
+    """Token 用量统计"""
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from app.extensions import db
+    from sqlalchemy import func
+
+    # 全部历史总计
+    total_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).scalar()
+    total_messages = db.session.query(func.count(Message.id)).scalar() or 0
+    total_convs = db.session.query(func.count(Conversation.id)).filter(
+        Conversation.is_deleted == False
+    ).scalar() or 0
+
+    # 用户输入 vs AI 输出
+    user_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).filter(
+        Message.role == 'user'
+    ).scalar()
+    assistant_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).filter(
+        Message.role == 'assistant'
+    ).scalar()
+
+    # 今日用量
+    today = datetime.utcnow().date()
+    today_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).filter(
+        func.date(Message.created_at) == today
+    ).scalar()
+    today_messages = db.session.query(func.count(Message.id)).filter(
+        func.date(Message.created_at) == today
+    ).scalar() or 0
+
+    return success({
+        "total_tokens": total_tokens,
+        "total_messages": total_messages,
+        "total_conversations": total_convs,
+        "user_tokens": user_tokens,
+        "assistant_tokens": assistant_tokens,
+        "today_tokens": today_tokens,
+        "today_messages": today_messages,
+    })

@@ -215,7 +215,8 @@ body::before{
 }
 .msg-row.system .msg-avatar{display:none}
 .msg-row.system .msg-body{text-align:center}
-.msg-time{font-size:10px; color:var(--text-dim); margin-top:4px; clear:both}
+.msg-time{font-size:10px; color:var(--text-dim); margin-top:4px}
+.msg-tokens{font-size:9px; color:var(--text-dim); opacity:.6; margin-left:8px}
 /* Markdown 渲染 */
 .msg-bubble pre{position:relative; margin:8px 0; border-radius:8px; overflow:hidden}
 .msg-bubble pre code{display:block; padding:14px 16px; overflow-x:auto; font-size:13px; line-height:1.5; background:#0d1117; border:1px solid #30363d}
@@ -409,6 +410,9 @@ body::before{
     <!-- dynamic -->
   </div>
   <div class="sidebar-footer">
+    <div class="token-stats" id="tokenStats" style="font-size:10px;color:var(--text-dim);text-align:center;margin-bottom:8px;line-height:1.6">
+      加载中...
+    </div>
     <button class="new-chat-btn" onclick="newConversation()">✦ 新对话</button>
   </div>
 </div>
@@ -826,6 +830,16 @@ function renderConvList(){
   });
 }
 
+function estimateTokens(text){
+  if(!text) return 0;
+  let t=0;
+  t += (text.match(/[一-鿿＀-￯]/g)||[]).length * 1.5;
+  t += (text.match(/[a-zA-Z]+/g)||[]).length * 0.3;
+  t += (text.match(/\d+/g)||[]).length * 0.5;
+  t += Math.max(0, text.length - t);
+  return Math.max(1, Math.round(t));
+}
+
 function escHtml(s){
   const d=document.createElement('div');
   d.textContent=s;
@@ -927,11 +941,14 @@ function addMsg(role, content, scroll=true, iconOverride=null){
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
       <div class="msg-bubble">${display}</div>
-      <div class="msg-time">${time}</div>
+      <div class="msg-time">${time}<span class="msg-tokens"></span></div>
     </div>
   `;
   msgBox.appendChild(row);
   if(scroll) msgBox.scrollTop = msgBox.scrollHeight;
+  // 显示 Token 数
+  const tokSpan = row.querySelector('.msg-tokens');
+  if(tokSpan) tokSpan.textContent = estimateTokens(content) + ' Tokens';
   // 高亮代码块
   if(role==='assistant' && typeof hljs!=='undefined'){
     row.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
@@ -1028,6 +1045,7 @@ async function sendMessage(){
     }catch(e){}
   }
   await loadConversations();
+  loadTokenStats();  // 刷新统计
 
   // Save for manual replay
   if(fullText) lastAssistantText = fullText;
@@ -1618,6 +1636,17 @@ document.getElementById('paramsModal').addEventListener('click', function(e){
   if(e.target===this) closeParamsModal();
 });
 
+// ==================== TOKEN STATS ====================
+async function loadTokenStats(){
+  try{
+    const data = await api('GET','/stats');
+    if(data.code!==200) return;
+    const s = data.data;
+    const el = document.getElementById('tokenStats');
+    el.innerHTML = '📊 今日 '+s.today_tokens.toLocaleString()+' Tokens ('+s.today_messages+'条)<br>📈 累计 '+s.total_tokens.toLocaleString()+' Tokens ('+s.total_messages+'条)';
+  }catch(e){}
+}
+
 // ==================== INIT ====================
 async function init(){
   loadTheme();
@@ -1647,6 +1676,9 @@ async function init(){
 
   // 显示/隐藏角色编辑删除按钮
   updateRoleButtons();
+
+  // 加载 Token 统计
+  loadTokenStats();
 
   // Connect WebSocket
   connectSocket();

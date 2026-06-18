@@ -1,3 +1,4 @@
+import re
 from app.extensions import db
 from datetime import datetime
 
@@ -18,7 +19,9 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @classmethod
-    def create(cls, conversation_id, role, content, tokens=0):
+    def create(cls, conversation_id, role, content, tokens=None):
+        if tokens is None:
+            tokens = cls._estimate_tokens(content)
         message = cls(
             conversation_id=conversation_id,
             role=role,
@@ -28,6 +31,18 @@ class Message(db.Model):
         db.session.add(message)
         db.session.commit()
         return message
+
+    @staticmethod
+    def _estimate_tokens(text):
+        """估算 Token 数（中文字符~1.5，英文词~1.3）"""
+        import re
+        if not text: return 0
+        chinese = len(re.findall(r'[一-鿿＀-￯]', text))
+        english = len(re.findall(r'[a-zA-Z]+', text))
+        numbers = len(re.findall(r'\d+', text))
+        other = max(0, len(text) - chinese - english - numbers)
+        return max(1, int(chinese * 1.5 + english * 0.3 + numbers * 0.5 + other))
+
 
     @classmethod
     def get_history(cls, conversation_id, limit=20):
