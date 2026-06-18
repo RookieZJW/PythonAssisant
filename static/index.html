@@ -423,6 +423,7 @@ body::before{
     <button class="header-btn" id="btnDelRole" onclick="deleteCurrentRole()" title="删除当前角色" style="display:none">🗑️</button>
     <span class="model-badge" id="modelBadge">DeepSeek</span>
     <div class="header-actions">
+      <button class="header-btn" onclick="openParamsModal()" title="模型参数">⚙️ 参数</button>
       <button class="header-btn" onclick="openThemeModal()" title="主题风格">🎨 主题</button>
       <button class="header-btn" onclick="toggleModel()" title="切换模型">🔄 模型</button>
       <button class="header-btn" onclick="openRoleModal()" title="创建角色">＋ 角色</button>
@@ -521,6 +522,22 @@ body::before{
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
       <button class="btn-save" onclick="resetTheme()">恢复默认</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== Params Modal ===== -->
+<div class="modal-overlay" id="paramsModal" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <h3>⚙️ 模型参数</h3>
+    <label>Temperature <span style="color:var(--accent);font-size:12px">(创意度 0~2)</span></label>
+    <div class="slider-row"><input type="range" id="paramTemp" min="0" max="200" value="70" oninput="updateParamDisplay()"><span id="valTemp" style="font-weight:700;color:var(--accent)">0.7</span></div>
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px">0=保守精确 1=平衡 2=创意</div>
+    <label>Max Tokens <span style="color:var(--accent);font-size:12px">(回复最大长度)</span></label>
+    <div class="slider-row"><input type="range" id="paramTokens" min="64" max="4096" step="64" value="2048" oninput="updateParamDisplay()"><span id="valTokens" style="font-weight:700;color:var(--accent)">2048</span></div>
+    <label style="margin-top:10px">Top-P <span style="color:var(--accent);font-size:12px">(词汇多样性 0~1)</span></label>
+    <div class="slider-row"><input type="range" id="paramTopP" min="0" max="100" value="100" oninput="updateParamDisplay()"><span id="valTopP" style="font-weight:700;color:var(--accent)">1.0</span></div>
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">1.0=多样 0.5=常用 0=确定</div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="resetParams()">恢复默认</button><button class="btn-save" onclick="closeParamsModal()">确定</button></div>
   </div>
 </div>
 
@@ -954,7 +971,8 @@ async function sendMessage(){
         message: message,
         model: currentModel,
         system_prompt: systemPrompt,
-        role_id: currentRoleId
+        role_id: currentRoleId,
+        params: modelParams
       })
     });
 
@@ -1546,10 +1564,64 @@ document.getElementById('themeModal').addEventListener('click', function(e){
   if(e.target===this) closeThemeModal();
 });
 
+// ==================== MODEL PARAMS ====================
+let modelParams = {temperature:0.7, max_tokens:2048, top_p:1.0};
+
+function loadParams(){
+  const saved = localStorage.getItem('modelParams');
+  if(saved){
+    try{ modelParams = JSON.parse(saved); }catch(e){}
+  }
+  document.getElementById('paramTemp').value = Math.round(modelParams.temperature * 100);
+  document.getElementById('paramTokens').value = modelParams.max_tokens;
+  document.getElementById('paramTopP').value = Math.round(modelParams.top_p * 100);
+  updateParamDisplay();
+}
+
+function updateParamDisplay(){
+  const t = document.getElementById('paramTemp').value / 100;
+  const m = document.getElementById('paramTokens').value;
+  const p = document.getElementById('paramTopP').value / 100;
+  document.getElementById('valTemp').textContent = t.toFixed(2);
+  document.getElementById('valTokens').textContent = m;
+  document.getElementById('valTopP').textContent = p.toFixed(2);
+  // 实时更新 params
+  modelParams.temperature = t;
+  modelParams.max_tokens = parseInt(m);
+  modelParams.top_p = p;
+}
+
+function saveParams(){
+  localStorage.setItem('modelParams', JSON.stringify(modelParams));
+}
+
+function openParamsModal(){
+  document.getElementById('paramsModal').style.display = 'flex';
+  document.getElementById('paramTemp').value = Math.round(modelParams.temperature * 100);
+  document.getElementById('paramTokens').value = modelParams.max_tokens;
+  document.getElementById('paramTopP').value = Math.round(modelParams.top_p * 100);
+  updateParamDisplay();
+}
+function closeParamsModal(){
+  document.getElementById('paramsModal').style.display = 'none';
+  saveParams();
+}
+function resetParams(){
+  modelParams = {temperature:0.7, max_tokens:2048, top_p:1.0};
+  document.getElementById('paramTemp').value = 70;
+  document.getElementById('paramTokens').value = 2048;
+  document.getElementById('paramTopP').value = 100;
+  updateParamDisplay();
+  saveParams();
+}
+document.getElementById('paramsModal').addEventListener('click', function(e){
+  if(e.target===this) closeParamsModal();
+});
+
 // ==================== INIT ====================
 async function init(){
-  // 先加载主题
   loadTheme();
+  loadParams();
 
   // 从 localStorage 恢复上次选择
   currentRoleId = localStorage.getItem('lastRoleId') || '';

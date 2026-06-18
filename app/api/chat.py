@@ -44,16 +44,16 @@ def chat_stream():
     model_type = data.get('model')
     system_prompt = data.get('system_prompt')
     role_id = data.get('role_id')
+    model_params = data.get('params', {})  # {temperature, max_tokens, top_p}
 
     def generate():
         try:
-            # 准备上下文
             conversation, memory, messages = ChatService.prepare_chat_context(
                 conversation_id, user_input, model_type, system_prompt, role_id
             )
 
-            # 调用模型流式输出
-            model_client = ModelService.get_model_client(model_type)
+            # 调用模型流式输出（支持参数覆盖）
+            model_client = ModelService.get_model_client(model_type, model_params)
             full_response = ""
 
             for chunk in model_client.stream(messages):
