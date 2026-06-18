@@ -428,6 +428,7 @@ body::before{
     <button class="header-btn" id="btnDelRole" onclick="deleteCurrentRole()" title="删除当前角色" style="display:none">🗑️</button>
     <span class="model-badge" id="modelBadge">DeepSeek</span>
     <div class="header-actions">
+      <button class="header-btn" onclick="exportConversation()" title="导出对话">📥 导出</button>
       <button class="header-btn" onclick="openParamsModal()" title="模型参数">⚙️ 参数</button>
       <button class="header-btn" onclick="openThemeModal()" title="主题风格">🎨 主题</button>
       <button class="header-btn" onclick="toggleModel()" title="切换模型">🔄 模型</button>
@@ -889,6 +890,12 @@ function newConversation(){
   msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+getAssistantIcon()+'</div><div class="msg-body"><div class="msg-bubble">👋 新对话开始！</div></div></div>';
   renderConvList();
   localStorage.removeItem('lastConvId');
+}
+
+function exportConversation(fmt='markdown'){
+  const convId = currentConvId;
+  if(!convId){ alert('请先发送一条消息创建对话'); return; }
+  window.open('/api/v1/conversations/'+convId+'/export?format='+fmt, '_blank');
 }
 
 async function deleteConversation(convId){
