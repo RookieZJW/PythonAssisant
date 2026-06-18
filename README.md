@@ -1,6 +1,6 @@
-# 🤖 Python 多功能智能助手
+# 🤖 智能助手 (Smart Assistant)
 
-基于 **Flask + LangChain** 构建的多模型智能对话系统，支持**三引擎 TTS 语音合成**、**浏览器语音输入 STT**、**SSE 流式响应**、**8 套预设主题**、**多角色系统**、**对话-角色绑定**、**自定义背景**，自带科技感粒子动画 Web 界面。
+基于 **Flask + LangChain** 的智能对话系统。支持**实时 Markdown 渲染**、**3 引擎 TTS 语音**、**浏览器 STT 语音输入**、**SSE 流式响应**、**12 套主题**、**角色系统**、**模型参数面板**、**Token 统计**。
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.x-green)](https://flask.palletsprojects.com/)
@@ -9,143 +9,80 @@
 
 ---
 
-## ✨ 功能特性
+## ✨ 功能
 
 | 分类 | 功能 | 说明 |
 |------|------|------|
-| 🎤 **语音输入** | 浏览器 SpeechRecognition | 说完自动发送，免费 |
-| 🔊 **语音输出** | Edge / 火山 / 腾讯 三引擎 | 14 种音色，多引擎切换 |
-| 🎨 **主题系统** | 8 套预设 + 全自定义 | 背景图/视频、透明度、阴影、边框 |
-| 🎭 **角色系统** | 6 内置 + 无限自定义 | 全部可编辑/删除，同名检测，对话绑定 |
+| 📝 **Markdown** | 代码高亮 + 一键复制 | 流式输出实时排版，JSON-SSE 换行保护 |
+| 🎤 **语音输入** | 浏览器 SpeechRecognition | 说完自动发送 |
+| 🔊 **语音输出** | 火山 + 腾讯 双引擎 | 11 种音色，失败自动兜底 |
+| 🎨 **主题** | 8 暗色 + 4 亮色 | 背景图/视频、透明度、气泡阴影 |
+| 🎭 **角色** | 6 内置 + 自定义 | 对话绑定、同名检测 |
+| ⚙️ **模型参数** | Temperature/MaxTokens/Top-P | 滑块实时调节 |
+| 📊 **Token 统计** | 每条消息 + 侧边栏汇总 | 今日/累计用量 |
 | 🤖 **多模型** | DeepSeek / 通义千问 | 一键切换 |
-| ⚡ **流式响应** | SSE Token 实时输出 | 打字机效果 |
-| 🧠 **对话记忆** | 滑动窗口 + MySQL | 多轮上下文，持久化 |
-| 🔧 **工具调用** | 计算器 / 数据分析 / 搜索 | 可扩展插件 |
-| 💾 **历史管理** | 侧边栏 + localStorage | 角色绑定，刷新不丢 |
-| 🔐 **安全** | API Key + Redis 限流 | 生产级 |
-| 🐳 **容器化** | Docker + Compose | 一键部署 |
+| ⚡ **流式** | SSE 逐字输出 | 打字机效果 |
+| 🔧 **工具** | 计算器/数据分析/搜索 | 可扩展 |
 
 ---
 
 ## 🚀 快速开始
 
 ```bash
-cd PythonAssistant
 pip install -r requirements.txt
-# 编辑 .env 填入 DEEPSEEK_API_KEY
+# .env 填入 DEEPSEEK_API_KEY
 python run.py
 # → http://localhost:5000
 ```
-
-首次启动自动建库建表、写入内置角色。麦克风诊断：`/static/mic-test.html`
 
 ---
 
 ## ⚙️ 配置项
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
-| `DEEPSEEK_API_KEY` | - | DeepSeek API 密钥 |
-| `QWEN_API_KEY` | - | 通义千问（可选） |
-| `DEFAULT_MODEL` | `deepseek` | 默认模型 |
-| `TEMPERATURE` | `0.7` | 随机性 0~1 |
-| `MAX_TOKENS` | `2048` | 单次最大 Token |
-| `DATABASE_URL` | MySQL | 数据库连接 |
-| `REDIS_URL` | - | 限流（可选） |
-| `VOLCANO_TTS_APP_ID` | - | 火山 TTS（可选） |
-| `VOLCANO_TTS_TOKEN` | - | 火山 TTS（可选） |
-| `TENCENT_TTS_SECRET_ID` | - | 腾讯 TTS（可选） |
-| `TENCENT_TTS_SECRET_KEY` | - | 腾讯 TTS（可选） |
+| 变量 | 说明 |
+|------|------|
+| `DEEPSEEK_API_KEY` | DeepSeek API Key |
+| `QWEN_API_KEY` | 通义千问（可选） |
+| `VOLCANO_TTS_APP_ID` / `VOLCANO_TTS_TOKEN` | 火山 TTS（可选） |
+| `TENCENT_TTS_SECRET_ID` / `TENCENT_TTS_SECRET_KEY` | 腾讯 TTS（可选） |
+| `DATABASE_URL` | MySQL 连接 |
+| `REDIS_URL` | 限流（可选） |
 
 ---
 
-## 📡 API（19 个接口）
+## 📡 API (20 个)
 
-### 对话 (2)
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `POST` | `/api/v1/chat` | 普通对话 |
-| `POST` | `/api/v1/chat/stream` | 流式对话 SSE |
-
-### 会话管理 (5)
-| `GET` | `/api/v1/conversations` | 列表 |
-| `POST` | `/api/v1/conversations` | 创建 |
-| `GET` | `/api/v1/conversations/{id}` | 详情含消息 |
-| `DELETE` | `/api/v1/conversations/{id}` | 软删除 |
-| `GET` | `/api/v1/conversations/{id}/messages` | 消息 |
-
-### 角色管理 (4)
-| `GET` | `/api/v1/roles` | 列表 |
-| `POST` | `/api/v1/roles` | 创建（同名检测） |
-| `PUT` | `/api/v1/roles/{id}` | 更新 |
-| `DELETE` | `/api/v1/roles/{id}` | 删除 |
-
-### 语音合成 (2)
+| `POST` | `/api/v1/chat` | 对话 |
+| `POST` | `/api/v1/chat/stream` | 流式 SSE |
+| `GET/POST` | `/api/v1/conversations` | 会话列表/创建 |
+| `GET/DELETE` | `/api/v1/conversations/{id}` | 详情/删除 |
+| `GET/POST` | `/api/v1/roles` | 角色列表/创建 |
+| `PUT/DELETE` | `/api/v1/roles/{id}` | 更新/删除 |
 | `POST` | `/api/v1/tts` | 文本转语音 |
-| `GET` | `/api/v1/voices` | 音色列表（3 引擎 14 种） |
-
-### 系统 (4)
+| `GET` | `/api/v1/voices` | 音色列表 |
+| `GET` | `/api/v1/stats` | Token 统计 |
 | `GET` | `/api/v1/health` | 健康检查 |
 | `GET` | `/api/v1/models` | 模型列表 |
-| `GET` | `/api/v1/tools` | 工具列表 |
-| `POST` | `/api/v1/tools/{name}` | 执行工具 |
 | `GET` | `/api/v1/local-media?path=` | 本地文件代理 |
 
-**统一响应**：`{"code": 200, "message": "success", "data": {...}}`
-
 ---
 
-## 🎤 语音功能
+## 🎤 TTS 音色 (11 个)
 
-### 语音输入（STT）
-
-- 点击 🎤 → 说话 → 自动识别并发送
-- 浏览器 `SpeechRecognition` API，免费
-- 实时转写显示，可手动编辑
-- 快捷键 `Ctrl+M`
-- 麦克风诊断：`/static/mic-test.html`（音量条 + 录音回放）
-
-### 语音输出（TTS）— 3 引擎 14 音色
-
-| 引擎 | 音色 | 费用 |
-|------|------|------|
-| 🟢 **Edge** | 晓晓 / 云希 / 晓伊 / 云扬 / 晓辰 | 免费 |
-| 🟣 **火山引擎** | 小源 / 大夏 / 清心 / 知行 / 彤彤 | 免费额度 |
-| 🔵 **腾讯云** | 智聆 / 智瑜 / 智美 / 智云 | 100 万字符/月免费 |
-
-- AI 回复后自动朗读
-- 底部下拉框切换音色/引擎
-- 可关闭"自动朗读"
-- 再次点击 🎤 打断语音
-
----
-
-## 🎨 主题系统
-
-**8 套预设**一键切换：
-
-| 主题 | 风格 |
+| 引擎 | 音色 |
 |------|------|
-| 🌙 夜曲 | 灰蓝 + 深黑，安静高级 |
-| 🌌 极光 | 青绿靛蓝粉，现代 AI 感 |
-| 🌅 暮光 | 暖琥珀 + 深棕，温暖优雅 |
-| 🌊 深海 | 天蓝深蓝，沉浸深邃 |
-| 🌸 樱语 | 玫瑰粉紫，柔和精致 |
-| 🔥 余烬 | 金橙深黑，暖色沉稳 |
-| 🟣 虚空 | 淡紫近纯黑，极简神秘 |
-| 🟩 黑客帝国 | 亮绿终端 + 纯黑，Matrix |
-
-**自定义**：背景图/视频（支持本地 D:\ 路径）· 面板透明度（仅背景）· 气泡阴影（大小/颜色）· 边框（粗细/颜色）
+| 🟣 火山 | 小源/大夏/清心/知行/知性/彤彤/大庆/小艾 |
+| 🔵 腾讯 | 智瑜/智美/智聆精品 |
 
 ---
 
-## 🎭 角色系统
+## 🎨 主题 (12 套)
 
-**6 个内置**：通用助手 / 编程老师 / 软件工程师 / 数据分析师 / 内容创作者 / 翻译专家
+**暗色**：夜曲/极光/暮光/深海/樱语/余烬/虚空/黑客帝国
 
-- **＋ 角色**：创建自定义角色，同名自动拒绝
-- **✏️🗑️**：所有角色可编辑/删除（至少保留 1 个）
-- **对话绑定**：每条对话独立绑定角色，切换自动恢复
+**亮色**：象牙白/薄荷奶绿/天空蓝/玫瑰雾粉
 
 ---
 
@@ -153,66 +90,29 @@ python run.py
 
 ```
 PythonAssistant/
-├── run.py                          # 启动入口
-├── gunicorn_config.py              # 生产 WSGI
-├── requirements.txt                # 依赖
-├── .env / .env.example             # 配置
-├── Dockerfile / docker-compose.yml # Docker
-├── README.md / deploy.md           # 文档
+├── run.py                     # 启动入口
 ├── app/
-│   ├── __init__.py                 # 工厂 + 角色初始化
-│   ├── extensions.py               # DB + SocketIO
-│   ├── config/                     # settings, prompts
-│   ├── models/                     # role, conversation, message, user
-│   ├── llm/                        # 策略模式 (DeepSeek/Qwen)
-│   ├── services/                   # chat, model, tool
-│   ├── tools/                      # calculator, analyzer, search
-│   ├── api/                        # chat, conversation, role, voice, system
-│   ├── middleware/                 # auth, rate_limit, logger
-│   └── utils/                      # response, exceptions, validators
-├── static/                         # index.html, mic-test.html
-├── tests/ / logs/ / migrations/
+│   ├── api/                   # chat/conversation/role/voice/system
+│   ├── models/                # conversation/message/role/user
+│   ├── services/              # chat/model/tool
+│   ├── llm/                   # deepseek/qwen/memory
+│   ├── config/                # settings/prompts
+│   ├── tools/                 # calculator/analyzer/search
+│   ├── middleware/            # auth/rate_limit/logger
+│   └── utils/                 # response/exceptions/validators
+├── static/                    # index.html/mic-test.html
+└── docs/                      # README/deploy/入门指南
 ```
 
 ---
 
-## 🚢 部署
+## 📚 文档
 
-详见 **[deploy.md](deploy.md)** — Gunicorn + Nginx + Docker + HTTPS 完整指南
-
-### 快速部署
-
-```bash
-# Docker
-docker compose up -d
-
-# 传统
-gunicorn -c gunicorn_config.py run:app
-```
-
-### SSE 关键配置
-
-```nginx
-proxy_buffering off;
-proxy_read_timeout 300s;
-```
+- [deploy.md](deploy.md) — 生产部署
+- [零基础入门指南.md](零基础入门指南.md) — 从零学编程
 
 ---
 
-## ❓ 常见问题
+## 📄 License
 
-| 问题 | 解决 |
-|------|------|
-| MySQL 连接拒绝 | 检查 `.env` 密码 |
-| 模型返回空 | 检查 API Key |
-| 流式无效果 | Nginx: `proxy_buffering off` |
-| 语音不识别 | `/static/mic-test.html` 诊断 |
-| Emoji 报错 | 已修：全表 `utf8mb4` |
-| 主题失效 | **Ctrl+F5** 强制刷新 |
-| 代码不生效 | 重启服务 |
-
----
-
-## 📄 许可证
-
-MIT License
+MIT
