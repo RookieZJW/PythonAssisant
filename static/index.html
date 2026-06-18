@@ -1041,9 +1041,10 @@ async function sendMessage(){
       const lines = text.split('\n');
       for(const line of lines){
         if(!line.startsWith('data: ')) continue;
-        const data = line.substring(6);
+        let data = line.substring(6);
         if(data==='[DONE]'){stopped=true;break readLoop}
         if(data.startsWith('[ERROR]')){fullText='⚠ '+data.substring(7);stopped=true;break readLoop}
+        try{data=JSON.parse(data);}catch(e){}
         fullText += data;
         bubble.innerHTML = renderMd(fullText,false);
         msgBox.scrollTop = msgBox.scrollHeight;

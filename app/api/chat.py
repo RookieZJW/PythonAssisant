@@ -56,9 +56,10 @@ def chat_stream():
             model_client = ModelService.get_model_client(model_type, model_params)
             full_response = ""
 
+            import json as _json
             for chunk in model_client.stream(messages):
                 full_response += chunk
-                yield f"data: {chunk}\n\n"
+                yield f"data: {_json.dumps(chunk)}\n\n"
 
             # 持久化
             Message.create(conversation.id, "user", user_input)
