@@ -9,11 +9,11 @@
 /* ========== Reset & Base ========== */
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg-deep:#08080c; --bg-panel:#0e0e14; --bg-card:#16161f;
-  --accent:#8b9dc3; --accent2:#6678a0; --accent3:#b3c6e7;
-  --text:#c8ccd4; --text-dim:#6b7080; --border:#1e1e2e;
-  --user-bg:linear-gradient(135deg,#4a5f80,#3a4f6f);
-  --ai-bg:linear-gradient(135deg,#0e0e18,#161622);
+  --bg-deep:#0a0a12; --bg-panel:#11111c; --bg-card:#1a1a2a;
+  --accent:#7b93c7; --accent2:#5a70a8; --accent3:#a8bce0;
+  --text:#cdd0da; --text-dim:#707588; --border:#202035;
+  --user-bg:linear-gradient(135deg,#5a70a8,#3f5280);
+  --ai-bg:linear-gradient(135deg,#111120,#1a1a2e);
   --glow:0 0 20px rgba(0,212,255,.15),0 0 60px rgba(0,212,255,.05);
   --radius:12px; --radius-sm:8px;
   --transition:0.25s cubic-bezier(.4,0,.2,1);
@@ -520,7 +520,7 @@ body::before{
     <div class="slider-row"><span>粗细</span><input type="range" id="borderW" min="0" max="6" value="1" step="0.5" oninput="applyBorder()"><span id="valBorderW">1px</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
       <span style="font-size:12px;color:var(--text-dim)">颜色</span>
-      <input type="color" id="borderColor" value="#1e1e2e" onchange="applyBorder()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer">
+      <input type="color" id="borderColor" value="#202035" onchange="applyBorder()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer">
     </div>
 
     <!-- 聊天气泡阴影 -->
@@ -1503,19 +1503,103 @@ document.addEventListener('keydown', function(e){
 
 // ==================== THEME SYSTEM ====================
 const PRESETS = {
-  nocturne:{name:'夜曲',colors:{'--bg-deep':'#08080c','--bg-panel':'#0e0e14','--bg-card':'#16161f','--accent':'#8b9dc3','--accent2':'#6678a0','--accent3':'#b3c6e7','--text':'#c8ccd4','--text-dim':'#6b7080','--border':'#1e1e2e','--user-bg':'linear-gradient(135deg,#4a5f80,#3a4f6f)','--ai-bg':'linear-gradient(135deg,#0e0e18,#161622)'}},
-  aurora:{name:'极光',colors:{'--bg-deep':'#061218','--bg-panel':'#0b1a24','--bg-card':'#0f2433','--accent':'#2dd4bf','--accent2':'#6366f1','--accent3':'#f472b6','--text':'#c8dde8','--text-dim':'#5a7a90','--border':'#152d3d','--user-bg':'linear-gradient(135deg,#14b8a6,#0d9488)','--ai-bg':'linear-gradient(135deg,#0b1a28,#0f2436)'}},
-  twilight:{name:'暮光',colors:{'--bg-deep':'#0e0a08','--bg-panel':'#1a100c','--bg-card':'#261810','--accent':'#e2a478','--accent2':'#b87333','--accent3':'#f4c7a2','--text':'#dcd0c4','--text-dim':'#8a7060','--border':'#302018','--user-bg':'linear-gradient(135deg,#b87333,#8b5c2a)','--ai-bg':'linear-gradient(135deg,#1a1010,#261a12)'}},
-  abyss:{name:'深海',colors:{'--bg-deep':'#030d16','--bg-panel':'#061420','--bg-card':'#091c2e','--accent':'#38bdf8','--accent2':'#0284c7','--accent3':'#7dd3fc','--text':'#b8d4e8','--text-dim':'#3d6a8a','--border':'#0e2438','--user-bg':'linear-gradient(135deg,#0284c7,#0369a1)','--ai-bg':'linear-gradient(135deg,#061420,#0a1e30)'}},
-  sakura:{name:'樱语',colors:{'--bg-deep':'#100610','--bg-panel':'#1a0a16','--bg-card':'#260e1e','--accent':'#f9a8d4','--accent2':'#db2777','--accent3':'#fbcfe8','--text':'#dcc8d4','--text-dim':'#8a6078','--border':'#301420','--user-bg':'linear-gradient(135deg,#db2777,#be185d)','--ai-bg':'linear-gradient(135deg,#1a0a18,#260e22)'}},
-  ember:{name:'余烬',colors:{'--bg-deep':'#0c0804','--bg-panel':'#181008','--bg-card':'#241808','--accent':'#f59e0b','--accent2':'#d97706','--accent3':'#fbbf24','--text':'#d8c8b0','--text-dim':'#8a7050','--border':'#2e1c08','--user-bg':'linear-gradient(135deg,#d97706,#b45309)','--ai-bg':'linear-gradient(135deg,#181008,#241808)'}},
-  void:{name:'虚空',colors:{'--bg-deep':'#040408','--bg-panel':'#0a0a10','--bg-card':'#101018','--accent':'#a78bfa','--accent2':'#7c3aed','--accent3':'#c4b5fd','--text':'#b8b8c8','--text-dim':'#585868','--border':'#1a1a28','--user-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)','--ai-bg':'linear-gradient(135deg,#0a0a14,#10101e)'}},
-  matrix:{name:'黑客帝国',colors:{'--bg-deep':'#000300','--bg-panel':'#000800','--bg-card':'#001000','--accent':'#00ff41','--accent2':'#00cc00','--accent3':'#00ff88','--text':'#b3ffb3','--text-dim':'#338033','--border':'#003300','--user-bg':'linear-gradient(135deg,#008811,#00660c)','--ai-bg':'linear-gradient(135deg,#000a00,#001800)'}},
+  nocturne:{name:'夜曲',colors:{
+    '--bg-deep':'#0a0a12','--bg-panel':'#11111c','--bg-card':'#1a1a2a',
+    '--accent':'#7b93c7','--accent2':'#5a70a8','--accent3':'#a8bce0',
+    '--text':'#cdd0da','--text-dim':'#707588','--border':'#202035',
+    '--user-bg':'linear-gradient(135deg,#5a70a8,#3f5280)',
+    '--ai-bg':'linear-gradient(135deg,#111120,#1a1a2e)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(90,112,168,.3)'
+  }},
+  aurora:{name:'极光',colors:{
+    '--bg-deep':'#051015','--bg-panel':'#0a1a26','--bg-card':'#0e2435',
+    '--accent':'#2dd4bf','--accent2':'#5b5fef','--accent3':'#f064b0',
+    '--text':'#c7dde6','--text-dim':'#5a8095','--border':'#142d40',
+    '--user-bg':'linear-gradient(135deg,#0d9488,#0f766e)',
+    '--ai-bg':'linear-gradient(135deg,#0a1a2a,#0f2538)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(13,148,136,.3)'
+  }},
+  twilight:{name:'暮光',colors:{
+    '--bg-deep':'#0c0806','--bg-panel':'#180f0a','--bg-card':'#24160e',
+    '--accent':'#e8a060','--accent2':'#c07030','--accent3':'#f0c898',
+    '--text':'#d8ccc0','--text-dim':'#887060','--border':'#2e1c10',
+    '--user-bg':'linear-gradient(135deg,#c07030,#935020)',
+    '--ai-bg':'linear-gradient(135deg,#180f0a,#221610)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(192,112,48,.25)'
+  }},
+  ocean:{name:'深海暗流',colors:{
+    '--bg-deep':'#020c18','--bg-panel':'#051426','--bg-card':'#081c34',
+    '--accent':'#38bdf8','--accent2':'#0369a1','--accent3':'#7dd3fc',
+    '--text':'#b0d0e8','--text-dim':'#3a6888','--border':'#0c2238',
+    '--user-bg':'linear-gradient(135deg,#0369a1,#024e7a)',
+    '--ai-bg':'linear-gradient(135deg,#051426,#091e32)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(3,105,161,.3)'
+  }},
+  sakura:{name:'樱吹雪',colors:{
+    '--bg-deep':'#0f050e','--bg-panel':'#1a0816','--bg-card':'#260c1e',
+    '--accent':'#f9a8d4','--accent2':'#db2777','--accent3':'#fbcfe8',
+    '--text':'#dec6d4','--text-dim':'#8a6078','--border':'#2e1420',
+    '--user-bg':'linear-gradient(135deg,#db2777,#b91c5b)',
+    '--ai-bg':'linear-gradient(135deg,#1a0816,#240c20)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(219,39,119,.3)'
+  }},
+  ember:{name:'暗烬',colors:{
+    '--bg-deep':'#0a0602','--bg-panel':'#160e04','--bg-card':'#201406',
+    '--accent':'#f59e0b','--accent2':'#d97706','--accent3':'#fbbf24',
+    '--text':'#d6c6ac','--text-dim':'#887050','--border':'#2c1a06',
+    '--user-bg':'linear-gradient(135deg,#d97706,#b45309)',
+    '--ai-bg':'linear-gradient(135deg,#160e04,#1e1208)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(217,119,6,.25)'
+  }},
+  orchid:{name:'幽兰',colors:{
+    '--bg-deep':'#080610','--bg-panel':'#0f0a1a','--bg-card':'#180e28',
+    '--accent':'#c084fc','--accent2':'#9333ea','--accent3':'#e0b0ff',
+    '--text':'#ccc0e8','--text-dim':'#706098','--border':'#221435',
+    '--user-bg':'linear-gradient(135deg,#9333ea,#7c22ce)',
+    '--ai-bg':'linear-gradient(135deg,#0f0a1a,#180e28)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(147,51,234,.3)'
+  }},
+  matrix:{name:'矩阵',colors:{
+    '--bg-deep':'#000300','--bg-panel':'#000800','--bg-card':'#001400',
+    '--accent':'#00ff41','--accent2':'#00cc33','--accent3':'#33ff66',
+    '--text':'#b3ffb3','--text-dim':'#338033','--border':'#002800',
+    '--user-bg':'linear-gradient(135deg,#00661a,#004d12)',
+    '--ai-bg':'linear-gradient(135deg,#000800,#001200)',
+    '--bubble-shadow':'0 4px 15px rgba(0,0,0,.4)','--bubble-shadow-user':'0 4px 20px rgba(0,102,26,.3)'
+  }},
   // 亮色主题
-  ivory:{name:'象牙白',colors:{'--bg-deep':'#f5f0e8','--bg-panel':'#ffffff','--bg-card':'#faf8f5','--accent':'#b8860b','--accent2':'#8b6914','--accent3':'#daa520','--text':'#3d3020','--text-dim':'#8a7a60','--border':'#e0d5c0','--user-bg':'linear-gradient(135deg,#b8860b,#8b6914)','--ai-bg':'linear-gradient(135deg,#faf8f5,#f0ebe0)'}},
-  mint:{name:'薄荷奶绿',colors:{'--bg-deep':'#e8f5ee','--bg-panel':'#fafffd','--bg-card':'#f2faf5','--accent':'#059669','--accent2':'#047857','--accent3':'#34d399','--text':'#1a3a2a','--text-dim':'#6a8a7a','--border':'#c8e6d4','--user-bg':'linear-gradient(135deg,#059669,#047857)','--ai-bg':'linear-gradient(135deg,#f2faf5,#e8f5ee)'}},
-  sky:{name:'天空蓝',colors:{'--bg-deep':'#e8f0fa','--bg-panel':'#f8faff','--bg-card':'#eef4fc','--accent':'#2563eb','--accent2':'#1d4ed8','--accent3':'#60a5fa','--text':'#1a2840','--text-dim':'#607898','--border':'#c8d8f0','--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)','--ai-bg':'linear-gradient(135deg,#eef4fc,#e0ecf8)'}},
-  rose:{name:'玫瑰雾粉',colors:{'--bg-deep':'#faf0f4','--bg-panel':'#fff8fa','--bg-card':'#fdf2f6','--accent':'#db2777','--accent2':'#be185d','--accent3':'#f472b6','--text':'#3d2030','--text-dim':'#8a6070','--border':'#ecc8d8','--user-bg':'linear-gradient(135deg,#db2777,#be185d)','--ai-bg':'linear-gradient(135deg,#fdf2f6,#f8e8f0)'}},
+  ivory:{name:'象牙白',colors:{
+    '--bg-deep':'#f3f0e8','--bg-panel':'#ffffff','--bg-card':'#f8f6f0',
+    '--accent':'#b8860b','--accent2':'#8b6914','--accent3':'#daa520',
+    '--text':'#3d3020','--text-dim':'#8a7a60','--border':'#e0d5c0',
+    '--user-bg':'linear-gradient(135deg,#b8860b,#8b6914)',
+    '--ai-bg':'linear-gradient(135deg,#f8f6f0,#efe8d8)',
+    '--bubble-shadow':'0 2px 10px rgba(0,0,0,.08)','--bubble-shadow-user':'0 2px 12px rgba(184,134,11,.2)'
+  }},
+  matcha:{name:'抹茶',colors:{
+    '--bg-deep':'#eaf5ec','--bg-panel':'#f8fdf9','--bg-card':'#f0f8f2',
+    '--accent':'#059669','--accent2':'#047857','--accent3':'#34d399',
+    '--text':'#1a3a28','--text-dim':'#608870','--border':'#c8e6d0',
+    '--user-bg':'linear-gradient(135deg,#059669,#047857)',
+    '--ai-bg':'linear-gradient(135deg,#f0f8f2,#e6f2ea)',
+    '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(5,150,105,.18)'
+  }},
+  sky:{name:'晴空',colors:{
+    '--bg-deep':'#e8f0fa','--bg-panel':'#f6f9ff','--bg-card':'#eef3fc',
+    '--accent':'#2563eb','--accent2':'#1d4ed8','--accent3':'#60a5fa',
+    '--text':'#1a2840','--text-dim':'#587098','--border':'#c8d6f0',
+    '--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
+    '--ai-bg':'linear-gradient(135deg,#eef3fc,#e0eaf8)',
+    '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(37,99,235,.18)'
+  }},
+  blush:{name:'桃气',colors:{
+    '--bg-deep':'#faf0f4','--bg-panel':'#fff6f9','--bg-card':'#fcf0f4',
+    '--accent':'#db2777','--accent2':'#be185d','--accent3':'#f472b6',
+    '--text':'#3a2030','--text-dim':'#886070','--border':'#ecc8d8',
+    '--user-bg':'linear-gradient(135deg,#db2777,#be185d)',
+    '--ai-bg':'linear-gradient(135deg,#fcf0f4,#f6e4ee)',
+    '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(219,39,119,.18)'
+  }},
 };
 
 let currentTheme = 'nocturne';
@@ -1744,7 +1828,7 @@ function resetTheme(){
   document.getElementById('opHeader').value = 0;
   document.getElementById('opInput').value = 0;
   document.getElementById('borderW').value = 1;
-  document.getElementById('borderColor').value = '#1e1e2e';
+  document.getElementById('borderColor').value = '#202035';
   document.getElementById('shadowAI').value = 10;
   document.getElementById('shadowUser').value = 12;
   document.getElementById('shadowColor').value = '#000000';
