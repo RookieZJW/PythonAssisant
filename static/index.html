@@ -118,12 +118,15 @@ body::before{
 }
 .conv-item .conv-icon{font-size:16px; flex-shrink:0}
 .conv-item .conv-title{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.conv-item .conv-del{
-  opacity:0; font-size:14px; color:#ff4455; cursor:pointer;
+.conv-edit,.conv-del{
+  opacity:0; font-size:12px; cursor:pointer;
   padding:4px; border-radius:4px; transition:var(--transition);
 }
-.conv-item:hover .conv-del{opacity:1}
-.conv-item .conv-del:hover{background:rgba(255,68,85,.15)}
+.conv-edit{color:var(--accent)}
+.conv-del{color:#ff4455}
+.conv-item:hover .conv-edit,.conv-item:hover .conv-del{opacity:1}
+.conv-edit:hover{background:rgba(0,212,255,.15)}
+.conv-del:hover{background:rgba(255,68,85,.15)}
 
 .sidebar-footer{
   padding:16px; border-top:1px solid var(--border);
@@ -828,25 +831,21 @@ function renderConvList(){
     div.innerHTML = `
       <span class="conv-icon">${icon}</span>
       <span class="conv-title">${escHtml(c.title||'新对话')}</span>
+      <span class="conv-edit" onclick="event.stopPropagation();startRename('${c.id}','${escHtml(c.title||'新对话').replace(/'/g,"\\'")}')">✏️</span>
       <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</span>
     `;
-    const titleSpan = div.querySelector('.conv-title');
     div.onclick = ()=>switchConversation(c.id);
-    // 双击标题改名
-    titleSpan.ondblclick = (e)=>{
-      e.stopPropagation();
-      const newTitle = prompt('修改会话标题:', titleSpan.textContent);
-      if(newTitle && newTitle.trim() && newTitle.trim()!==c.title){
-        renameConversation(c.id, newTitle.trim());
-      }
-    };
     convList.appendChild(div);
   });
 }
 
-async function renameConversation(convId, newTitle){
-  const resp = await api('PUT', '/conversations/'+convId, {title: newTitle});
-  if(resp.code===200) await loadConversations();
+function startRename(convId, oldTitle){
+  const newTitle = prompt('修改会话标题:', oldTitle);
+  if(newTitle && newTitle.trim() && newTitle.trim()!==oldTitle){
+    api('PUT','/conversations/'+convId,{title:newTitle.trim()}).then(r=>{
+      if(r.code===200) loadConversations();
+    });
+  }
 }
 
 function estimateTokens(text){
