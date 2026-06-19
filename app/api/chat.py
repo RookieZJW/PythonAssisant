@@ -40,17 +40,20 @@ def chat_stream():
         return error("message 参数不能为空", 400)
 
     conversation_id = data.get('conversation_id', 'default')
-    user_input = data['message']
+    original_message = data['message']  # 用户原始输入（存数据库）
+    user_input = original_message
     model_type = data.get('model')
     system_prompt = data.get('system_prompt')
     role_id = data.get('role_id')
     model_params = data.get('params', {})
-    attachment = data.get('attachment', {})  # {filename, content}
+    attachment = data.get('attachment', {})
+    attach_filename = ''
 
-    # 有附件时，把文件内容拼到用户消息前面
+    # 有附件时，拼文件内容到 LLM 上下文（但不存数据库）
     if attachment and attachment.get('content'):
-        file_ctx = f"[用户上传了文件: {attachment.get('filename', '未知')}]\n\n文件内容:\n```\n{attachment['content']}\n```\n\n基于以上文件内容，回答用户问题:\n"
-        user_input = file_ctx + user_input
+        attach_filename = attachment.get('filename', '文件')
+        file_ctx = f"[用户上传了文件: {attach_filename}]\n\n文件内容:\n```\n{attachment['content']}\n```\n\n基于以上文件内容，回答用户问题:\n"
+        user_input = file_ctx + original_message
 
     def generate():
         try:
@@ -58,7 +61,6 @@ def chat_stream():
                 conversation_id, user_input, model_type, system_prompt, role_id
             )
 
-            # 调用模型流式输出（支持参数覆盖）
             model_client = ModelService.get_model_client(model_type, model_params)
             full_response = ""
 
@@ -67,8 +69,11 @@ def chat_stream():
                 full_response += chunk
                 yield f"data: {_json.dumps(chunk)}\n\n"
 
-            # 持久化
-            Message.create(conversation.id, "user", user_input)
+            # 存原始消息（不含文件内容），附件信息通过 role 前缀标注
+            display_msg = original_message
+            if attach_filename:
+                display_msg = '📎 '+attach_filename+'\n'+original_message
+            Message.create(conversation.id, "user", display_msg)
             Message.create(conversation.id, "assistant", full_response)
 
             # 更新标题

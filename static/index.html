@@ -1039,7 +1039,8 @@ async function sendMessage(){
   sendBtn.disabled = true;
   userInput.value = '';
   userInput.style.height = 'auto';
-  addMsg('user', message);
+  const userMsg = attachment ? '📎 '+attachment.filename+'\n'+message : message;
+  addMsg('user', userMsg);
 
   // Typing
   const typingRow = document.createElement('div');
