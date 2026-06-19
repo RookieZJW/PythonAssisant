@@ -38,8 +38,7 @@ def get_conversation(conversation_id):
     """获取会话详情（含消息列表）"""
     conversation = Conversation.query.filter_by(
         id=conversation_id,
-        is_deleted=False
-    ).first()
+            ).first()
 
     if not conversation:
         return error("会话不存在", 404)
@@ -55,14 +54,13 @@ def delete_conversation(conversation_id):
     """删除会话（软删除）"""
     conversation = Conversation.query.filter_by(
         id=conversation_id,
-        is_deleted=False
-    ).first()
+            ).first()
 
     if not conversation:
         return error("会话不存在", 404)
 
-    conversation.soft_delete()
-    return success(None, "会话已删除")
+    conversation.hard_delete()
+    return success(None, "会话及消息已删除")
 
 
 @conversation_bp.route('/conversations/<conversation_id>/messages', methods=['GET'])
@@ -70,8 +68,7 @@ def get_messages(conversation_id):
     """获取会话消息列表"""
     conversation = Conversation.query.filter_by(
         id=conversation_id,
-        is_deleted=False
-    ).first()
+            ).first()
 
     if not conversation:
         return error("会话不存在", 404)
@@ -85,8 +82,7 @@ def get_messages(conversation_id):
 def export_conversation(conversation_id):
     """导出对话为 Markdown 文件"""
     conversation = Conversation.query.filter_by(
-        id=conversation_id, is_deleted=False
-    ).first()
+        id=conversation_id,     ).first()
     if not conversation:
         return error("会话不存在", 404)
 

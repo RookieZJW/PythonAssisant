@@ -38,10 +38,7 @@ class Conversation(db.Model):
     def get_or_create(cls, conversation_id, role_id=None):
         """获取或创建会话"""
         if conversation_id and conversation_id != "default":
-            conversation = cls.query.filter_by(
-                id=conversation_id,
-                is_deleted=False
-            ).first()
+            conversation = cls.query.filter_by(id=conversation_id).first()
             if conversation:
                 return conversation
 
@@ -50,10 +47,7 @@ class Conversation(db.Model):
     @classmethod
     def get_list(cls, user_id="anonymous", page=1, page_size=20):
         """获取会话列表"""
-        query = cls.query.filter_by(
-            user_id=user_id,
-            is_deleted=False
-        ).order_by(cls.updated_at.desc())
+        query = cls.query.filter_by(user_id=user_id).order_by(cls.updated_at.desc())
 
         total = query.count()
         conversations = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -65,9 +59,10 @@ class Conversation(db.Model):
             "items": [c.to_dict() for c in conversations],
         }
 
-    def soft_delete(self):
-        """软删除会话"""
-        self.is_deleted = True
+    def hard_delete(self):
+        """硬删除会话及所有关联消息"""
+        Message.query.filter_by(conversation_id=self.id).delete()
+        db.session.delete(self)
         db.session.commit()
 
     def to_dict(self):
