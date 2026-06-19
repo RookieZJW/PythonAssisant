@@ -159,17 +159,21 @@ body::before{
   content:'';position:absolute;inset:0;z-index:0;border-radius:inherit;
   background:var(--bg-card);opacity:var(--select-opacity);
 }
-.chat-header select{
+.select-wrap select{
   background:transparent; color:var(--text); border:1px solid var(--border);
   position:relative;z-index:1;
-  padding:10px 36px 10px 16px; border-radius:var(--radius-sm);
-  font-size:15px; cursor:pointer; outline:none; min-width:160px;
-  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23707090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-position:right 10px center;
+  padding:6px 28px 6px 10px; border-radius:var(--radius-sm);
+  font-size:13px; cursor:pointer; outline:none;
+  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23707090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center;
   transition:var(--transition);
 }
-.chat-header select:focus{border-color:var(--accent); box-shadow:0 0 10px rgba(0,212,255,.1)}
-.chat-header select option{background:var(--bg-card); color:var(--text)}
+.chat-header .select-wrap select{
+  padding:10px 36px 10px 16px;
+  font-size:15px; min-width:160px;
+}
+.select-wrap select:focus{border-color:var(--accent); box-shadow:0 0 10px rgba(0,212,255,.1)}
+.select-wrap select option{background:var(--bg-card); color:var(--text)}
 .model-badge{
   font-size:11px; padding:4px 10px; border-radius:20px;
   background:rgba(0,212,255,.1); color:var(--accent);
@@ -425,7 +429,7 @@ body::before{
   .sidebar{position:fixed;left:-280px;z-index:50;transition:transform .3s}
   .sidebar.open{transform:translateX(280px)}
   .chat-header{padding:14px 16px}
-  .chat-header select{min-width:140px;font-size:14px}
+  .chat-header .select-wrap select{min-width:140px;font-size:14px}
 }
 </style>
 </head>
@@ -493,7 +497,7 @@ body::before{
     </div>
     <div class="voice-settings">
       <span style="font-size:11px;color:var(--text-dim)">TTS:</span>
-      <select id="voiceSelect" onchange="changeVoice()"></select>
+      <span class="select-wrap"><select id="voiceSelect" onchange="changeVoice()"></select></span>
       <button class="header-btn" onclick="speakLastMsg()" title="朗读最后一条回复" style="font-size:11px;padding:4px 10px">🔊 朗读</button>
       <button class="header-btn" onclick="stopSpeaking()" title="停止朗读" style="font-size:11px;padding:4px 10px">⏹ 停止</button>
       <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer">
