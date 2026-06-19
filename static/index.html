@@ -210,7 +210,7 @@ body::before{
   text-align:left; opacity:var(--bubble-opacity-user);
 }
 .msg-row.assistant .msg-bubble{
-  background:var(--ai-bg); color:var(--text);
+  background:var(--ai-bg); color:#fff;
   border-bottom-left-radius:6px; border:none;
   box-shadow:var(--bubble-shadow);
   opacity:var(--bubble-opacity-ai);
@@ -1033,7 +1033,7 @@ function addMsg(role, content, scroll=true, iconOverride=null){
   }
   const time = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
   // assistant 消息渲染 Markdown（历史消息用完整 marked 渲染）
-  const display = role==='assistant' ? renderMd(content, true) : escHtml(content);
+  const display = renderMd(content, true);
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
