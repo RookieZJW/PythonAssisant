@@ -200,7 +200,6 @@ body::before{
   display:inline-block; max-width:78%; padding:14px 18px; border-radius:16px;
   font-size:14px; line-height:1.7;
   overflow-wrap:break-word; word-wrap:break-word;
-  white-space:pre-line;
 }
 .msg-row.user .msg-body{text-align:right}
 .msg-row.user .msg-bubble{
@@ -249,6 +248,8 @@ body::before{
 .msg-row.user .msg-bubble th{background:rgba(255,255,255,.1)}
 .msg-row.user .msg-bubble blockquote{border-left-color:rgba(255,255,255,.4); color:rgba(255,255,255,.7)}
 .msg-row.user .msg-bubble a{color:#fff}
+.msg-bubble>:last-child{margin-bottom:0}
+.msg-bubble>:first-child{margin-top:0}
 .msg-row.user .msg-time{text-align:right}
 .msg-row.assistant .msg-time{text-align:left}
 
