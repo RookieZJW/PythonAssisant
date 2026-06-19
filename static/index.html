@@ -155,11 +155,15 @@ body::before{
   background:var(--bg-panel); opacity:var(--header-opacity);
 }
 .select-wrap{position:relative;display:inline-block;border-radius:var(--radius-sm);overflow:hidden}
-.select-wrap{display:inline-block}
+.select-wrap{display:inline-block;position:relative;border-radius:var(--radius-sm)}
+.select-wrap::before{
+  content:'';position:absolute;inset:0;z-index:0;border-radius:inherit;
+  background:var(--bg-card);opacity:var(--select-opacity);
+}
 .select-wrap select{
-  background:var(--bg-card); color:var(--text); border:1px solid var(--border);
+  background:transparent; color:var(--text); border:1px solid var(--border);
   padding:6px 28px 6px 10px; border-radius:var(--radius-sm);
-  font-size:13px; cursor:pointer; outline:none; opacity:var(--select-opacity);
+  font-size:13px; cursor:pointer; outline:none; position:relative;z-index:1;
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23707090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 8px center;
   transition:var(--transition);
