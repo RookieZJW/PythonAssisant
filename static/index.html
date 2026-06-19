@@ -24,8 +24,8 @@
   /* 聊天气泡阴影 */
   --bubble-shadow:0 4px 15px rgba(0,0,0,.25);
   --bubble-shadow-user:0 4px 20px rgba(123,47,255,.25);
-  --bubble-opacity-user:1; --bubble-opacity-ai:1;
-  --bg-card-opacity:1; --btn-opacity:1;
+  --bubble-opacity-user:0; --bubble-opacity-ai:0;
+  --bg-card-opacity:0; --btn-opacity:0;
 }
 body{
   font-family:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
@@ -545,10 +545,10 @@ body::before{
 
     <!-- 透明度调节 -->
     <label style="margin-top:14px">透明度调节</label>
-    <div class="slider-row"><span>用户气泡</span><input type="range" id="opUserBubble" min="0" max="100" value="100" oninput="applyColors()"><span id="txtUserBubble">100%</span></div>
-    <div class="slider-row"><span>AI气泡</span><input type="range" id="opAiBubble" min="0" max="100" value="100" oninput="applyColors()"><span id="txtAiBubble">100%</span></div>
-    <div class="slider-row"><span>输入栏</span><input type="range" id="opInputBg" min="0" max="100" value="100" oninput="applyColors()"><span id="txtInputBg">100%</span></div>
-    <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="100" oninput="applyColors()"><span id="txtBtn">100%</span></div>
+    <div class="slider-row"><span>用户气泡</span><input type="range" id="opUserBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtUserBubble">100%</span></div>
+    <div class="slider-row"><span>AI气泡</span><input type="range" id="opAiBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtAiBubble">100%</span></div>
+    <div class="slider-row"><span>输入栏</span><input type="range" id="opInputBg" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInputBg">100%</span></div>
+    <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">100%</span></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
@@ -1972,6 +1972,12 @@ async function init(){
 
   // 显示/隐藏角色编辑删除按钮
   updateRoleButtons();
+
+  // 初始透明度显示
+  document.getElementById('txtUserBubble').textContent='0%';
+  document.getElementById('txtAiBubble').textContent='0%';
+  document.getElementById('txtInputBg').textContent='0%';
+  document.getElementById('txtBtn').textContent='0%';
 
   // 加载 Token 统计
   loadTokenStats();
