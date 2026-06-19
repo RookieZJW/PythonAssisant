@@ -26,6 +26,7 @@
   --bubble-shadow-user:0 4px 20px rgba(123,47,255,.25);
   --bubble-opacity-user:0; --bubble-opacity-ai:0;
   --bg-card-opacity:0; --btn-opacity:0;
+  --select-opacity:0; --input-opacity2:0; --action-opacity:0;
 }
 body{
   font-family:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
@@ -157,6 +158,8 @@ body::before{
 }
 .chat-header select{
   background:var(--bg-card); color:var(--text); border:1px solid var(--border);
+  opacity:var(--select-opacity);
+}
   padding:8px 32px 8px 14px; border-radius:var(--radius-sm);
   font-size:14px; cursor:pointer; outline:none;
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23707090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -283,6 +286,7 @@ body::before{
   flex:1; position:relative;
   background:var(--bg-card); border-radius:var(--radius);
   border:1px solid var(--border); transition:var(--transition);
+  opacity:var(--input-opacity2);
 }
 .input-wrapper:focus-within{border-color:var(--accent); box-shadow:0 0 15px rgba(0,212,255,.1)}
 .input-wrapper textarea{
@@ -297,6 +301,7 @@ body::before{
   color:#fff; border:none; cursor:pointer; font-size:20px;
   transition:var(--transition); flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
+  opacity:var(--action-opacity);
 }
 .send-btn:hover{box-shadow:0 0 20px rgba(0,212,255,.4); transform:scale(1.05)}
 .send-btn:disabled{background:var(--border); box-shadow:none; transform:none; cursor:not-allowed}
@@ -305,6 +310,7 @@ body::before{
   background:var(--bg-card); color:var(--text); border:1px solid var(--border);
   cursor:pointer; font-size:20px; transition:var(--transition); flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
+  opacity:var(--action-opacity);
 }
 .mic-btn:hover{border-color:var(--accent2); box-shadow:0 0 15px rgba(123,47,255,.2)}
 .mic-btn.listening{
@@ -549,6 +555,9 @@ body::before{
     <div class="slider-row"><span>AI气泡</span><input type="range" id="opAiBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtAiBubble">100%</span></div>
     <div class="slider-row"><span>输入栏</span><input type="range" id="opInputBg" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInputBg">100%</span></div>
     <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">100%</span></div>
+    <div class="slider-row"><span>下拉框</span><input type="range" id="opSelect" min="0" max="100" value="0" oninput="applyColors()"><span id="txtSelect">0%</span></div>
+    <div class="slider-row"><span>��入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
+    <div class="slider-row"><span>操作按钮</span><input type="range" id="opAction" min="0" max="100" value="0" oninput="applyColors()"><span id="txtAction">0%</span></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
@@ -1800,10 +1809,19 @@ function applyColors(){
   r.style.setProperty('--bubble-opacity-ai',oa);
   r.style.setProperty('--bg-card-opacity',oi);
   r.style.setProperty('--btn-opacity',ob);
+  const os=document.getElementById('opSelect').value/100;
+  const oi2=document.getElementById('opInput2').value/100;
+  const oac=document.getElementById('opAction').value/100;
+  r.style.setProperty('--select-opacity',os);
+  r.style.setProperty('--input-opacity2',oi2);
+  r.style.setProperty('--action-opacity',oac);
   document.getElementById('txtUserBubble').textContent=Math.round(ou*100)+'%';
   document.getElementById('txtAiBubble').textContent=Math.round(oa*100)+'%';
   document.getElementById('txtInputBg').textContent=Math.round(oi*100)+'%';
   document.getElementById('txtBtn').textContent=Math.round(ob*100)+'%';
+  document.getElementById('txtSelect').textContent=Math.round(os*100)+'%';
+  document.getElementById('txtInput2').textContent=Math.round(oi2*100)+'%';
+  document.getElementById('txtAction').textContent=Math.round(oac*100)+'%';
   saveTheme();
 }
 
@@ -1978,6 +1996,9 @@ async function init(){
   document.getElementById('txtAiBubble').textContent='0%';
   document.getElementById('txtInputBg').textContent='0%';
   document.getElementById('txtBtn').textContent='0%';
+  document.getElementById('txtSelect').textContent='0%';
+  document.getElementById('txtInput2').textContent='0%';
+  document.getElementById('txtAction').textContent='0%';
 
   // 加载 Token 统计
   loadTokenStats();
