@@ -88,8 +88,7 @@ body::before{
   background:var(--bg-panel); opacity:var(--panel-opacity);
 }
 .sidebar-header{
-  padding:20px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:10px;
+  padding:20px; display:flex; align-items:center; gap:10px;
 }
 .sidebar-header .logo{
   width:36px; height:36px; border-radius:10px;
@@ -131,7 +130,7 @@ body::before{
 .conv-del:hover{background:rgba(255,68,85,.15)}
 
 .sidebar-footer{
-  padding:16px; border-top:1px solid var(--border);
+  padding:16px;
 }
 .new-chat-btn{
   width:100%; padding:12px; border-radius:var(--radius);
@@ -566,7 +565,7 @@ body::before{
     <div class="slider-row"><span>聊天气泡</span><input type="range" id="opBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBubble">0%</span></div>
     <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">0%</span></div>
     <div class="slider-row"><span>下拉框</span><input type="range" id="opSelect" min="0" max="100" value="0" oninput="applyColors()"><span id="txtSelect">0%</span></div>
-    <div class="slider-row"><span>��入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
+    <div class="slider-row"><span>输入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
