@@ -892,10 +892,23 @@ function newConversation(){
   localStorage.removeItem('lastConvId');
 }
 
-function exportConversation(fmt='markdown'){
+async function exportConversation(fmt='markdown'){
   const convId = currentConvId;
   if(!convId){ alert('请先发送一条消息创建对话'); return; }
-  window.open('/api/v1/conversations/'+convId+'/export?format='+fmt, '_blank');
+  try{
+    const resp = await fetch('/api/v1/conversations/'+convId+'/export?format='+fmt);
+    if(!resp.ok){ alert('导出失败'); return; }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // 从响应头提取文件名
+    const disp = resp.headers.get('Content-Disposition')||'';
+    const m = disp.match(/filename\*?=(?:UTF-8''|" ?)?(.+)/);
+    a.download = m ? m[1].replace(/"/g,'') : ('对话导出.'+(fmt==='txt'?'txt':'md'));
+    a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){ alert('导出失败: '+e.message); }
 }
 
 async function deleteConversation(convId){
