@@ -530,11 +530,11 @@ body::before{
 
     <!-- 颜色调节 -->
     <label style="margin-top:14px">颜色调节</label>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">用户气泡</span><input type="color" id="colUserBubble" onchange="applyColors()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:11px" id="txtUserBubble"></span></div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">AI气泡</span><input type="color" id="colAiBubble" onchange="applyColors()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:11px" id="txtAiBubble"></span></div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">输入栏背景</span><input type="color" id="colInputBg" onchange="applyColors()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:11px" id="txtInputBg"></span></div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">按钮颜色</span><input type="color" id="colBtn" onchange="applyColors()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:11px" id="txtBtn"></span></div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">强调色</span><input type="color" id="colAccent" onchange="applyColors()" style="width:40px;height:28px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:11px" id="txtAccent"></span></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">用户气泡</span><input type="color" id="colUserBubble" onchange="applyColors()" style="width:36px;height:26px;border:none;border-radius:4px;cursor:pointer"><input type="range" id="opUserBubble" min="20" max="100" value="100" oninput="applyColors()" style="flex:1"><span style="font-size:10px;width:30px;text-align:right" id="txtUserBubble"></span></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">AI气泡</span><input type="color" id="colAiBubble" onchange="applyColors()" style="width:36px;height:26px;border:none;border-radius:4px;cursor:pointer"><input type="range" id="opAiBubble" min="20" max="100" value="100" oninput="applyColors()" style="flex:1"><span style="font-size:10px;width:30px;text-align:right" id="txtAiBubble"></span></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">输入栏背景</span><input type="color" id="colInputBg" onchange="applyColors()" style="width:36px;height:26px;border:none;border-radius:4px;cursor:pointer"><input type="range" id="opInputBg" min="20" max="100" value="100" oninput="applyColors()" style="flex:1"><span style="font-size:10px;width:30px;text-align:right" id="txtInputBg"></span></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">按钮颜色</span><input type="color" id="colBtn" onchange="applyColors()" style="width:36px;height:26px;border:none;border-radius:4px;cursor:pointer"><input type="range" id="opBtn" min="20" max="100" value="100" oninput="applyColors()" style="flex:1"><span style="font-size:10px;width:30px;text-align:right" id="txtBtn"></span></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:12px;color:var(--text-dim);width:70px">强调色</span><input type="color" id="colAccent" onchange="applyColors()" style="width:36px;height:26px;border:none;border-radius:4px;cursor:pointer"><span style="font-size:10px;width:30px;text-align:right" id="txtAccent"></span></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
@@ -1692,10 +1692,11 @@ function applyBorder(){
   saveTheme();
 }
 
-function hexToGradient(hex){
+function hexToGradient(hex, alpha){
+  if(!alpha) alpha=1;
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-  const darker = '#'+Math.round(r*.6).toString(16).padStart(2,'0')+Math.round(g*.6).toString(16).padStart(2,'0')+Math.round(b*.6).toString(16).padStart(2,'0');
-  return 'linear-gradient(135deg,'+hex+','+darker+')';
+  const d=Math.round(r*.6).toString(16).padStart(2,'0')+Math.round(g*.6).toString(16).padStart(2,'0')+Math.round(b*.6).toString(16).padStart(2,'0');
+  return 'linear-gradient(135deg,rgba('+r+','+g+','+b+','+alpha+'),rgba('+parseInt(d.slice(0,2),16)+','+parseInt(d.slice(2,4),16)+','+parseInt(d.slice(4,6),16)+','+alpha+'))';
 }
 
 function applyColors(){
@@ -1705,40 +1706,51 @@ function applyColors(){
   const i=document.getElementById('colInputBg').value;
   const b=document.getElementById('colBtn').value;
   const ac=document.getElementById('colAccent').value;
-  r.style.setProperty('--user-bg',hexToGradient(u));
-  r.style.setProperty('--ai-bg',hexToGradient(a));
-  r.style.setProperty('--bg-card',i);
+  const ou=document.getElementById('opUserBubble').value/100;
+  const oa=document.getElementById('opAiBubble').value/100;
+  const oi=document.getElementById('opInputBg').value/100;
+  const ob=document.getElementById('opBtn').value/100;
+
+  r.style.setProperty('--user-bg',hexToGradient(u,ou));
+  r.style.setProperty('--ai-bg',hexToGradient(a,oa));
+  r.style.setProperty('--bg-card',i+'b3');
   r.style.setProperty('--accent',ac);
   r.style.setProperty('--accent2',ac+'cc');
-  // 按钮用 --bg-card 做背景，header-btn 用 --bg-card
-  document.getElementById('txtUserBubble').textContent=u;
-  document.getElementById('txtAiBubble').textContent=a;
-  document.getElementById('txtInputBg').textContent=i;
-  document.getElementById('txtBtn').textContent=b;
+
+  const ibr=parseInt(i.slice(1,3),16), ibg=parseInt(i.slice(3,5),16), ibb=parseInt(i.slice(5,7),16);
+  r.style.setProperty('--bg-card','rgba('+ibr+','+ibg+','+ibb+','+oi+')');
+
+  const btnStr='rgba('+parseInt(b.slice(1,3),16)+','+parseInt(b.slice(3,5),16)+','+parseInt(b.slice(5,7),16)+','+ob+')';
+  document.querySelectorAll('.header-btn').forEach(el=>{el.style.background=btnStr;});
+
+  document.getElementById('txtUserBubble').textContent=(ou*100)+'%';
+  document.getElementById('txtAiBubble').textContent=(oa*100)+'%';
+  document.getElementById('txtInputBg').textContent=(oi*100)+'%';
+  document.getElementById('txtBtn').textContent=(ob*100)+'%';
   document.getElementById('txtAccent').textContent=ac;
-  // 按钮颜色应用到 header-btn 背景
-  document.querySelectorAll('.header-btn').forEach(el=>{el.style.background=b;el.style.borderColor=b+'88';});
   saveTheme();
 }
 
 function initColorPickers(){
-  const r=document.documentElement;
-  // 从 user-bg gradient 中提取第一个颜色
-  const ub=r.style.getPropertyValue('--user-bg')||getComputedStyle(r).getPropertyValue('--user-bg');
+  const r=document.documentElement, cs=getComputedStyle(r);
+  const ub=r.style.getPropertyValue('--user-bg')||cs.getPropertyValue('--user-bg');
   const m=ub.match(/#[0-9a-fA-F]{6}/);
-  const u=m?m[0]:'#7b2fff';
-  document.getElementById('colUserBubble').value=u; document.getElementById('txtUserBubble').textContent=u;
-  const ab=r.style.getPropertyValue('--ai-bg')||getComputedStyle(r).getPropertyValue('--ai-bg');
+  document.getElementById('colUserBubble').value=m?m[0]:'#7b2fff';
+  const ab=r.style.getPropertyValue('--ai-bg')||cs.getPropertyValue('--ai-bg');
   const m2=ab.match(/#[0-9a-fA-F]{6}/);
-  const a=m2?m2[0]:'#0e0e18';
-  document.getElementById('colAiBubble').value=a; document.getElementById('txtAiBubble').textContent=a;
-  const bg=r.style.getPropertyValue('--bg-card')||getComputedStyle(r).getPropertyValue('--bg-card');
-  const bgClean=bg.trim()||'#16161f';
-  document.getElementById('colInputBg').value=bgClean; document.getElementById('txtInputBg').textContent=bgClean;
-  document.getElementById('colBtn').value=bgClean; document.getElementById('txtBtn').textContent=bgClean;
-  const ac=r.style.getPropertyValue('--accent')||getComputedStyle(r).getPropertyValue('--accent');
-  const acClean=ac.trim()||'#8b9dc3';
-  document.getElementById('colAccent').value=acClean; document.getElementById('txtAccent').textContent=acClean;
+  document.getElementById('colAiBubble').value=m2?m2[0]:'#0e0e18';
+  const bg=r.style.getPropertyValue('--bg-card')||cs.getPropertyValue('--bg-card');
+  const bgClean=(bg.match(/#[0-9a-fA-F]{6}/)||['#16161f'])[0];
+  document.getElementById('colInputBg').value=bgClean;
+  document.getElementById('colBtn').value=bgClean;
+  const ac=r.style.getPropertyValue('--accent')||cs.getPropertyValue('--accent');
+  document.getElementById('colAccent').value=(ac.match(/#[0-9a-fA-F]{6}/)||['#8b9dc3'])[0];
+
+  document.getElementById('opUserBubble').value=100; document.getElementById('txtUserBubble').textContent='100%';
+  document.getElementById('opAiBubble').value=100; document.getElementById('txtAiBubble').textContent='100%';
+  document.getElementById('opInputBg').value=100; document.getElementById('txtInputBg').textContent='100%';
+  document.getElementById('opBtn').value=100; document.getElementById('txtBtn').textContent='100%';
+  document.getElementById('txtAccent').textContent=document.getElementById('colAccent').value;
 }
 
 function applyShadow(){
