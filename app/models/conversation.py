@@ -1,4 +1,5 @@
 from app.extensions import db
+from app.models.message import Message
 from datetime import datetime
 import uuid
 
