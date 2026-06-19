@@ -26,6 +26,7 @@
   --bubble-shadow-user:0 4px 20px rgba(123,47,255,.25);
   --bubble-opacity:0; --btn-opacity:0;
   --select-opacity:0; --input-opacity2:0;
+  --bubble-text:#fff;
 }
 body{
   font-family:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
@@ -208,7 +209,7 @@ body::before{
 }
 .msg-row.user .msg-body{text-align:right}
 .msg-row.user .msg-bubble{
-  color:#fff; border-bottom-right-radius:6px; border:none;
+  color:var(--bubble-text); border-bottom-right-radius:6px; border:none;
   box-shadow:var(--bubble-shadow-user);
   text-align:left; position:relative; background:transparent;
 }
@@ -217,7 +218,7 @@ body::before{
   background:var(--user-bg); opacity:var(--bubble-opacity);
 }
 .msg-row.assistant .msg-bubble{
-  color:#fff; border-bottom-left-radius:6px; border:none;
+  color:var(--bubble-text); border-bottom-left-radius:6px; border:none;
   box-shadow:var(--bubble-shadow);
   position:relative; background:transparent;
 }
@@ -1538,7 +1539,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#5a70a8,#3f5280)',
     '--ai-bg':'linear-gradient(135deg,#5a70a8,#3f5280)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(90,112,168,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   aurora:{name:'极光',colors:{
     '--bg-deep':'#051015','--bg-panel':'#0a1a26','--bg-card':'#0e2435',
     '--accent':'#2dd4bf','--accent2':'#5b5fef','--accent3':'#f064b0',
@@ -1546,7 +1547,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#0d9488,#0f766e)',
     '--ai-bg':'linear-gradient(135deg,#0d9488,#0f766e)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(13,148,136,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   twilight:{name:'暮光',colors:{
     '--bg-deep':'#0c0806','--bg-panel':'#180f0a','--bg-card':'#24160e',
     '--accent':'#e8a060','--accent2':'#c07030','--accent3':'#f0c898',
@@ -1554,7 +1555,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#c07030,#935020)',
     '--ai-bg':'linear-gradient(135deg,#c07030,#935020)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(192,112,48,.25)'
-  }},
+  ,'--bubble-text':'#fff'}},
   ocean:{name:'深海暗流',colors:{
     '--bg-deep':'#020c18','--bg-panel':'#051426','--bg-card':'#081c34',
     '--accent':'#38bdf8','--accent2':'#0369a1','--accent3':'#7dd3fc',
@@ -1562,7 +1563,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#0369a1,#024e7a)',
     '--ai-bg':'linear-gradient(135deg,#0369a1,#024e7a)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(3,105,161,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   sakura:{name:'樱吹雪',colors:{
     '--bg-deep':'#0f050e','--bg-panel':'#1a0816','--bg-card':'#260c1e',
     '--accent':'#f9a8d4','--accent2':'#db2777','--accent3':'#fbcfe8',
@@ -1570,7 +1571,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#db2777,#b91c5b)',
     '--ai-bg':'linear-gradient(135deg,#db2777,#b91c5b)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(219,39,119,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   ember:{name:'暗烬',colors:{
     '--bg-deep':'#0a0602','--bg-panel':'#160e04','--bg-card':'#201406',
     '--accent':'#f59e0b','--accent2':'#d97706','--accent3':'#fbbf24',
@@ -1578,7 +1579,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#d97706,#b45309)',
     '--ai-bg':'linear-gradient(135deg,#d97706,#b45309)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(217,119,6,.25)'
-  }},
+  ,'--bubble-text':'#fff'}},
   orchid:{name:'幽兰',colors:{
     '--bg-deep':'#080610','--bg-panel':'#0f0a1a','--bg-card':'#180e28',
     '--accent':'#c084fc','--accent2':'#9333ea','--accent3':'#e0b0ff',
@@ -1586,7 +1587,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#9333ea,#7c22ce)',
     '--ai-bg':'linear-gradient(135deg,#9333ea,#7c22ce)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.3)','--bubble-shadow-user':'0 4px 20px rgba(147,51,234,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   matrix:{name:'矩阵',colors:{
     '--bg-deep':'#000300','--bg-panel':'#000800','--bg-card':'#001400',
     '--accent':'#00ff41','--accent2':'#00cc33','--accent3':'#33ff66',
@@ -1594,7 +1595,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#00661a,#004d12)',
     '--ai-bg':'linear-gradient(135deg,#00661a,#004d12)',
     '--bubble-shadow':'0 4px 15px rgba(0,0,0,.4)','--bubble-shadow-user':'0 4px 20px rgba(0,102,26,.3)'
-  }},
+  ,'--bubble-text':'#fff'}},
   // 亮色主题
   ivory:{name:'象牙白',colors:{
     '--bg-deep':'#f3f0e8','--bg-panel':'#ffffff','--bg-card':'#f8f6f0',
@@ -1603,7 +1604,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#b8860b,#8b6914)',
     '--ai-bg':'linear-gradient(135deg,#b8860b,#8b6914)',
     '--bubble-shadow':'0 2px 10px rgba(0,0,0,.08)','--bubble-shadow-user':'0 2px 12px rgba(184,134,11,.2)'
-  }},
+  ,'--bubble-text':'#3d3020'}},
   matcha:{name:'抹茶',colors:{
     '--bg-deep':'#eaf5ec','--bg-panel':'#f8fdf9','--bg-card':'#f0f8f2',
     '--accent':'#059669','--accent2':'#047857','--accent3':'#34d399',
@@ -1611,7 +1612,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#059669,#047857)',
     '--ai-bg':'linear-gradient(135deg,#059669,#047857)',
     '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(5,150,105,.18)'
-  }},
+  ,'--bubble-text':'#1a3a28'}},
   sky:{name:'晴空',colors:{
     '--bg-deep':'#e8f0fa','--bg-panel':'#f6f9ff','--bg-card':'#eef3fc',
     '--accent':'#2563eb','--accent2':'#1d4ed8','--accent3':'#60a5fa',
@@ -1619,7 +1620,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
     '--ai-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
     '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(37,99,235,.18)'
-  }},
+  ,'--bubble-text':'#1a2840'}},
   blush:{name:'桃气',colors:{
     '--bg-deep':'#faf0f4','--bg-panel':'#fff6f9','--bg-card':'#fcf0f4',
     '--accent':'#db2777','--accent2':'#be185d','--accent3':'#f472b6',
@@ -1627,7 +1628,7 @@ const PRESETS = {
     '--user-bg':'linear-gradient(135deg,#db2777,#be185d)',
     '--ai-bg':'linear-gradient(135deg,#db2777,#be185d)',
     '--bubble-shadow':'0 2px 10px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 12px rgba(219,39,119,.18)'
-  }},
+  ,'--bubble-text':'#3a2030'}},
 };
 
 let currentTheme = 'nocturne';
