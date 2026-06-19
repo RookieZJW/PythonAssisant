@@ -67,12 +67,14 @@ def create_app(config_name=None):
     from .api.system import system_bp
     from .api.role import role_bp
     from .api.voice import voice_bp
+    from .api.upload import upload_bp
 
     app.register_blueprint(chat_bp, url_prefix='/api/v1')
     app.register_blueprint(conversation_bp, url_prefix='/api/v1')
     app.register_blueprint(system_bp, url_prefix='/api/v1')
     app.register_blueprint(role_bp, url_prefix='/api/v1')
     app.register_blueprint(voice_bp, url_prefix='/api/v1')
+    app.register_blueprint(upload_bp, url_prefix='/api/v1')
 
     # 首页 - 聊天界面
     from flask import send_from_directory

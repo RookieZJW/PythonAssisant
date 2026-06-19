@@ -452,6 +452,9 @@ body::before{
         <div class="voice-status" id="voiceStatus"><span class="voice-dot"></span>正在聆听...</div>
         <textarea id="userInput" placeholder="输入消息，或点击🎤语音说话..." rows="1"></textarea>
       </div>
+      <label class="mic-btn" id="attachBtn" title="上传附件" style="cursor:pointer">
+        📎<input type="file" id="fileInput" onchange="handleFile(event)" style="display:none" accept=".txt,.pdf,.docx,.doc,.md,.py,.js,.html,.css,.json,.xml,.csv">
+      </label>
       <button class="mic-btn" id="micBtn" title="语音输入">🎤</button>
       <button class="send-btn" id="sendBtn" title="发送">↑</button>
     </div>
@@ -579,6 +582,7 @@ let currentRoleId = '';
 let currentConvId = '';
 let currentModel = 'deepseek';
 let isStreaming = false;
+let attachment = null;  // {filename, content, size, type}
 
 const msgBox = document.getElementById('messages');
 const userInput = document.getElementById('userInput');
@@ -887,6 +891,7 @@ async function switchConversation(convId){
 
 function newConversation(){
   currentConvId = '';
+  attachment = null; updateAttachUI();
   msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+getAssistantIcon()+'</div><div class="msg-body"><div class="msg-bubble">👋 新对话开始！</div></div></div>';
   renderConvList();
   localStorage.removeItem('lastConvId');
@@ -1059,7 +1064,8 @@ async function sendMessage(){
         model: currentModel,
         system_prompt: systemPrompt,
         role_id: currentRoleId,
-        params: modelParams
+        params: modelParams,
+        attachment: attachment
       })
     });
 
@@ -1394,6 +1400,59 @@ function changeVoice(){
   if(!sel.value) return;
   currentTtsVoice = sel.value;
   localStorage.setItem('ttsVoice', currentTtsVoice);
+}
+
+// ==================== FILE ATTACHMENT ====================
+async function handleFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 5*1024*1024){ alert('文件不能超过 5MB'); e.target.value=''; return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('conversation_id', currentConvId);
+
+  try{
+    const resp = await fetch('/api/v1/upload', {method:'POST', body:fd});
+    const data = await resp.json();
+    if(data.code!==200){ alert(data.message); return; }
+
+    attachment = {
+      filename: data.data.filename,
+      content: data.data.content,
+      size: data.data.size,
+      type: data.data.type
+    };
+    updateAttachUI();
+  }catch(e){ alert('上传失败: '+e.message); }
+  e.target.value = '';
+}
+
+function removeAttachment(){
+  attachment = null;
+  updateAttachUI();
+}
+
+function updateAttachUI(){
+  const btn = document.getElementById('attachBtn');
+  if(attachment){
+    const kb = Math.round(attachment.size/1024);
+    btn.textContent = '📄';
+    btn.title = attachment.filename+' ('+kb+'KB) - 点击更换';
+    btn.style.background = 'rgba(0,200,100,.15)';
+    btn.style.borderColor = 'rgba(0,200,100,.4)';
+    btn.style.color = '#0c8';
+    btn.oncontextmenu = (e)=>{ e.preventDefault(); removeAttachment(); };
+    userInput.placeholder = '基于「'+attachment.filename+'」提问...';
+  } else {
+    btn.textContent = '📎';
+    btn.title = '上传附件';
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.oncontextmenu = null;
+    userInput.placeholder = '输入消息，或点击🎤语音说话...';
+  }
 }
 
 // ---- Mic Button ----

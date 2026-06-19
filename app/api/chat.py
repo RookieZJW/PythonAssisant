@@ -44,7 +44,13 @@ def chat_stream():
     model_type = data.get('model')
     system_prompt = data.get('system_prompt')
     role_id = data.get('role_id')
-    model_params = data.get('params', {})  # {temperature, max_tokens, top_p}
+    model_params = data.get('params', {})
+    attachment = data.get('attachment', {})  # {filename, content}
+
+    # 有附件时，把文件内容拼到用户消息前面
+    if attachment and attachment.get('content'):
+        file_ctx = f"[用户上传了文件: {attachment.get('filename', '未知')}]\n\n文件内容:\n```\n{attachment['content']}\n```\n\n基于以上文件内容，回答用户问题:\n"
+        user_input = file_ctx + user_input
 
     def generate():
         try:
