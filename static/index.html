@@ -537,6 +537,10 @@ body::before{
       </select>
     </div>
     <button class="btn-cancel" style="margin-top:6px;padding:6px 12px;font-size:12px" onclick="clearBg()">清除背景</button>
+    <button class="btn-save" style="margin-top:6px;padding:6px 12px;font-size:12px;margin-left:6px" onclick="saveBgToHistory()">💾 存入历史</button>
+
+    <!-- 背景历史 -->
+    <div id="bgHistoryList" style="margin-top:10px;max-height:180px;overflow-y:auto"></div>
 
     <!-- 透明度 -->
     <label style="margin-top:14px">面板透明度</label>
@@ -1745,6 +1749,16 @@ function applyBg(){
   }
   updateBgMode();
   saveTheme();
+  // 非空 URL 自动存入历史
+  const rawUrl = document.getElementById('bgUrl').value.trim();
+  if(rawUrl){
+    api('POST','/backgrounds',{
+      url: rawUrl,
+      type: type,
+      mode: mode,
+      size: document.getElementById('bgSize').value,
+    }).then(()=>loadBgHistory());
+  }
 }
 
 function updateBgMode(){
@@ -1784,6 +1798,50 @@ function clearBg(){
   if(layer) layer.style.display = 'none';
   themeSettings.bgUrl = '';
   saveTheme();
+}
+
+async function saveBgToHistory(){
+  const url = document.getElementById('bgUrl').value.trim();
+  if(!url){ alert('请先输入背景URL并应用'); return; }
+  await api('POST','/backgrounds',{
+    url: url,
+    type: document.getElementById('bgType').value,
+    mode: document.getElementById('bgMode').value,
+    size: document.getElementById('bgSize').value,
+  });
+  loadBgHistory();
+}
+
+async function loadBgHistory(){
+  try{
+    const data = await api('GET','/backgrounds');
+    if(data.code!==200) return;
+    const el = document.getElementById('bgHistoryList');
+    if(!data.data||!data.data.length){ el.innerHTML=''; return; }
+    let html = '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">📚 历史背景</div>';
+    data.data.forEach(b=>{
+      const icon = b.bg_type==='video'?'🎬':'🖼';
+      const u = b.url.replace(/'/g,"\\'");
+      html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px" onmouseover="this.style.background=\'var(--bg-card)\'" onmouseout="this.style.background=\'transparent\'">';
+      html += '<span style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="applyBgFromHistory(\''+u+'\',\''+b.bg_type+'\',\''+b.mode+'\',\''+b.size+'\')">'+icon+' '+escHtml(decodeURIComponent(b.url.split('?path=')[1]||b.url).slice(-40))+'</span>';
+      html += '<span style="cursor:pointer;color:#ff4455;font-size:14px" onclick="deleteBgHistory(\''+b.id+'\')">✕</span>';
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  }catch(e){}
+}
+
+function applyBgFromHistory(url, type, mode, size){
+  document.getElementById('bgUrl').value = url;
+  document.getElementById('bgType').value = type;
+  document.getElementById('bgMode').value = mode;
+  document.getElementById('bgSize').value = size;
+  applyBg();
+}
+
+async function deleteBgHistory(id){
+  await api('DELETE','/backgrounds/'+id);
+  loadBgHistory();
 }
 
 function applyTransparency(){
@@ -1887,6 +1945,7 @@ function openThemeModal(){
   document.getElementById('themeModal').style.display = 'flex';
   renderThemeGrid();
   updateSliders();
+  loadBgHistory();
 }
 
 function closeThemeModal(){

@@ -50,7 +50,7 @@ def create_app(config_name=None):
         CORS(app)
 
     # 提前导入所有模型，确保 create_all 能发现它们
-    from .models import User, Conversation, Message, Role  # noqa
+    from .models import User, Conversation, Message, Role, Background  # noqa
 
     # 初始化扩展（包括 create_all）
     init_extensions(app)
@@ -68,6 +68,7 @@ def create_app(config_name=None):
     from .api.role import role_bp
     from .api.voice import voice_bp
     from .api.upload import upload_bp
+    from .api.background_api import bg_bp
 
     app.register_blueprint(chat_bp, url_prefix='/api/v1')
     app.register_blueprint(conversation_bp, url_prefix='/api/v1')
@@ -75,6 +76,7 @@ def create_app(config_name=None):
     app.register_blueprint(role_bp, url_prefix='/api/v1')
     app.register_blueprint(voice_bp, url_prefix='/api/v1')
     app.register_blueprint(upload_bp, url_prefix='/api/v1')
+    app.register_blueprint(bg_bp, url_prefix='/api/v1')
 
     # 首页 - 聊天界面
     from flask import send_from_directory
