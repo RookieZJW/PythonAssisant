@@ -156,9 +156,14 @@ body::before{
   content:''; position:absolute; inset:0; z-index:-1;
   background:var(--bg-panel); opacity:var(--header-opacity);
 }
+.select-wrap{position:relative;display:inline-block;border-radius:var(--radius-sm);overflow:hidden}
+.select-wrap::after{
+  content:'';position:absolute;inset:0;z-index:0;border-radius:inherit;
+  background:var(--bg-card);opacity:var(--select-opacity);
+}
 .chat-header select{
-  background:var(--bg-card); color:var(--text); border:1px solid var(--border);
-  opacity:var(--select-opacity);
+  background:transparent; color:var(--text); border:1px solid var(--border);
+  position:relative;z-index:1;
 }
   padding:8px 32px 8px 14px; border-radius:var(--radius-sm);
   font-size:14px; cursor:pointer; outline:none;
@@ -455,9 +460,7 @@ body::before{
 <!-- ===== Main ===== -->
 <div class="main">
   <div class="chat-header">
-    <select id="roleSelect" onchange="switchRole()">
-      <!-- dynamic -->
-    </select>
+    <span class="select-wrap"><select id="roleSelect" onchange="switchRole()"></select></span>
     <button class="header-btn" id="btnEditRole" onclick="editCurrentRole()" title="编辑当前角色" style="display:none">✏️</button>
     <button class="header-btn" id="btnDelRole" onclick="deleteCurrentRole()" title="删除当前角色" style="display:none">🗑️</button>
     <span class="model-badge" id="modelBadge">DeepSeek</span>
