@@ -49,16 +49,24 @@ def get_conversation(conversation_id):
     return success(data)
 
 
+@conversation_bp.route('/conversations/<conversation_id>', methods=['PUT'])
+def update_conversation(conversation_id):
+    """修改会话标题"""
+    conversation = Conversation.query.filter_by(id=conversation_id).first()
+    if not conversation: return error("会话不存在", 404)
+    data = request.get_json() or {}
+    title = data.get('title', '').strip()
+    if not title or len(title) > 200: return error("标题不能为空且不超过200字", 400)
+    conversation.title = title
+    db.session.commit()
+    return success(conversation.to_dict(), "标题已更新")
+
+
 @conversation_bp.route('/conversations/<conversation_id>', methods=['DELETE'])
 def delete_conversation(conversation_id):
-    """删除会话（软删除）"""
-    conversation = Conversation.query.filter_by(
-        id=conversation_id,
-            ).first()
-
-    if not conversation:
-        return error("会话不存在", 404)
-
+    """删除会话"""
+    conversation = Conversation.query.filter_by(id=conversation_id).first()
+    if not conversation: return error("会话不存在", 404)
     conversation.hard_delete()
     return success(None, "会话及消息已删除")
 

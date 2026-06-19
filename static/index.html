@@ -830,9 +830,23 @@ function renderConvList(){
       <span class="conv-title">${escHtml(c.title||'新对话')}</span>
       <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</span>
     `;
+    const titleSpan = div.querySelector('.conv-title');
     div.onclick = ()=>switchConversation(c.id);
+    // 双击标题改名
+    titleSpan.ondblclick = (e)=>{
+      e.stopPropagation();
+      const newTitle = prompt('修改会话标题:', titleSpan.textContent);
+      if(newTitle && newTitle.trim() && newTitle.trim()!==c.title){
+        renameConversation(c.id, newTitle.trim());
+      }
+    };
     convList.appendChild(div);
   });
+}
+
+async function renameConversation(convId, newTitle){
+  const resp = await api('PUT', '/conversations/'+convId, {title: newTitle});
+  if(resp.code===200) await loadConversations();
 }
 
 function estimateTokens(text){
