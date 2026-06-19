@@ -24,9 +24,8 @@
   /* 聊天气泡阴影 */
   --bubble-shadow:0 4px 15px rgba(0,0,0,.25);
   --bubble-shadow-user:0 4px 20px rgba(123,47,255,.25);
-  --bubble-opacity-user:0; --bubble-opacity-ai:0;
-  --bg-card-opacity:0; --btn-opacity:0;
-  --select-opacity:0; --input-opacity2:0; --action-opacity:0;
+  --bubble-opacity:0; --btn-opacity:0;
+  --select-opacity:0; --input-opacity2:0;
 }
 body{
   font-family:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
@@ -216,7 +215,7 @@ body::before{
 }
 .msg-row.user .msg-bubble::after{
   content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
-  background:var(--user-bg); opacity:var(--bubble-opacity-user);
+  background:var(--user-bg); opacity:var(--bubble-opacity);
 }
 .msg-row.assistant .msg-bubble{
   color:#fff; border-bottom-left-radius:6px; border:none;
@@ -225,7 +224,7 @@ body::before{
 }
 .msg-row.assistant .msg-bubble::after{
   content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
-  background:var(--ai-bg); opacity:var(--bubble-opacity-ai);
+  background:var(--ai-bg); opacity:var(--bubble-opacity);
 }
 .header-btn{position:relative; background:transparent;}
 .header-btn::after{
@@ -312,7 +311,7 @@ body::before{
 .send-btn::after{
   content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
-  opacity:var(--action-opacity);
+  opacity:var(--btn-opacity);
 }
 .send-btn:hover{box-shadow:0 0 20px rgba(0,212,255,.4); transform:scale(1.05)}
 .send-btn:disabled{background:var(--border); box-shadow:none; transform:none; cursor:not-allowed}
@@ -325,7 +324,7 @@ body::before{
 }
 .mic-btn::after{
   content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
-  background:var(--bg-card); opacity:var(--action-opacity);
+  background:var(--bg-card); opacity:var(--btn-opacity);
 }
 .mic-btn:hover{border-color:var(--accent2); box-shadow:0 0 15px rgba(123,47,255,.2)}
 .mic-btn.listening{
@@ -564,13 +563,11 @@ body::before{
 
     <!-- 透明度调节 -->
     <label style="margin-top:14px">透明度调节</label>
-    <div class="slider-row"><span>用户气泡</span><input type="range" id="opUserBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtUserBubble">100%</span></div>
-    <div class="slider-row"><span>AI气泡</span><input type="range" id="opAiBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtAiBubble">100%</span></div>
+    <div class="slider-row"><span>聊天气泡</span><input type="range" id="opBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBubble">0%</span></div>
     <div class="slider-row"><span>输入栏</span><input type="range" id="opInputBg" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInputBg">100%</span></div>
-    <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">100%</span></div>
+    <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">0%</span></div>
     <div class="slider-row"><span>下拉框</span><input type="range" id="opSelect" min="0" max="100" value="0" oninput="applyColors()"><span id="txtSelect">0%</span></div>
     <div class="slider-row"><span>��入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
-    <div class="slider-row"><span>操作按钮</span><input type="range" id="opAction" min="0" max="100" value="0" oninput="applyColors()"><span id="txtAction">0%</span></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeThemeModal()">关闭</button>
@@ -1814,27 +1811,21 @@ function applyBorder(){
 
 function applyColors(){
   const r=document.documentElement;
-  const ou=document.getElementById('opUserBubble').value/100;
-  const oa=document.getElementById('opAiBubble').value/100;
+  const obub=document.getElementById('opBubble').value/100;
+  const obtn=document.getElementById('opBtn').value/100;
   const oi=document.getElementById('opInputBg').value/100;
-  const ob=document.getElementById('opBtn').value/100;
-  r.style.setProperty('--bubble-opacity-user',ou);
-  r.style.setProperty('--bubble-opacity-ai',oa);
-  r.style.setProperty('--bg-card-opacity',oi);
-  r.style.setProperty('--btn-opacity',ob);
   const os=document.getElementById('opSelect').value/100;
   const oi2=document.getElementById('opInput2').value/100;
-  const oac=document.getElementById('opAction').value/100;
+  r.style.setProperty('--bubble-opacity',obub);
+  r.style.setProperty('--btn-opacity',obtn);
+  r.style.setProperty('--bg-card-opacity',oi);
   r.style.setProperty('--select-opacity',os);
   r.style.setProperty('--input-opacity2',oi2);
-  r.style.setProperty('--action-opacity',oac);
-  document.getElementById('txtUserBubble').textContent=Math.round(ou*100)+'%';
-  document.getElementById('txtAiBubble').textContent=Math.round(oa*100)+'%';
+  document.getElementById('txtBubble').textContent=Math.round(obub*100)+'%';
+  document.getElementById('txtBtn').textContent=Math.round(obtn*100)+'%';
   document.getElementById('txtInputBg').textContent=Math.round(oi*100)+'%';
-  document.getElementById('txtBtn').textContent=Math.round(ob*100)+'%';
   document.getElementById('txtSelect').textContent=Math.round(os*100)+'%';
   document.getElementById('txtInput2').textContent=Math.round(oi2*100)+'%';
-  document.getElementById('txtAction').textContent=Math.round(oac*100)+'%';
   saveTheme();
 }
 
@@ -2005,13 +1996,11 @@ async function init(){
   updateRoleButtons();
 
   // 初始透明度显示
-  document.getElementById('txtUserBubble').textContent='0%';
-  document.getElementById('txtAiBubble').textContent='0%';
-  document.getElementById('txtInputBg').textContent='0%';
+  document.getElementById('txtBubble').textContent='0%';
   document.getElementById('txtBtn').textContent='0%';
+  document.getElementById('txtInputBg').textContent='0%';
   document.getElementById('txtSelect').textContent='0%';
   document.getElementById('txtInput2').textContent='0%';
-  document.getElementById('txtAction').textContent='0%';
 
   // 加载 Token 统计
   loadTokenStats();
