@@ -452,9 +452,8 @@ body::before{
         <div class="voice-status" id="voiceStatus"><span class="voice-dot"></span>正在聆听...</div>
         <textarea id="userInput" placeholder="输入消息，或点击🎤语音说话..." rows="1"></textarea>
       </div>
-      <label class="mic-btn" id="attachBtn" title="上传附件" style="cursor:pointer">
-        📎<input type="file" id="fileInput" onchange="handleFile(event)" style="display:none" accept=".txt,.pdf,.docx,.doc,.md,.py,.js,.html,.css,.json,.xml,.csv">
-      </label>
+      <button class="mic-btn" id="attachBtn" title="上传附件" onclick="toggleAttachment()">📎</button>
+      <input type="file" id="fileInput" onchange="handleFile(event)" style="display:none" accept=".txt,.pdf,.docx,.doc,.md,.py,.js,.html,.css,.json,.xml,.csv">
       <button class="mic-btn" id="micBtn" title="语音输入">🎤</button>
       <button class="send-btn" id="sendBtn" title="发送">↑</button>
     </div>
@@ -891,7 +890,7 @@ async function switchConversation(convId){
 
 function newConversation(){
   currentConvId = '';
-  attachment = null; updateAttachUI();
+  if(attachment){ attachment=null; document.getElementById('fileInput').value=''; updateAttachUI(); }
   msgBox.innerHTML = '<div class="msg-row assistant"><div class="msg-avatar">'+getAssistantIcon()+'</div><div class="msg-body"><div class="msg-bubble">👋 新对话开始！</div></div></div>';
   renderConvList();
   localStorage.removeItem('lastConvId');
@@ -1428,10 +1427,16 @@ async function handleFile(e){
   e.target.value = '';
 }
 
-function removeAttachment(){
-  attachment = null;
-  document.getElementById('fileInput').value = '';  // 重置 input，允许再次选择同一文件
-  updateAttachUI();
+function toggleAttachment(){
+  if(attachment){
+    // 有附件 → 移除
+    attachment = null;
+    document.getElementById('fileInput').value = '';
+    updateAttachUI();
+  } else {
+    // 无附件 → 打开文件选择
+    document.getElementById('fileInput').click();
+  }
 }
 
 function updateAttachUI(){
@@ -1439,19 +1444,17 @@ function updateAttachUI(){
   if(attachment){
     const kb = Math.round(attachment.size/1024);
     btn.textContent = '📄';
-    btn.title = attachment.filename+' ('+kb+'KB) - 点击更换';
+    btn.title = attachment.filename+' ('+kb+'KB) — 点击移除';
     btn.style.background = 'rgba(0,200,100,.15)';
     btn.style.borderColor = 'rgba(0,200,100,.4)';
     btn.style.color = '#0c8';
-    btn.oncontextmenu = (e)=>{ e.preventDefault(); removeAttachment(); };
     userInput.placeholder = '基于「'+attachment.filename+'」提问...';
   } else {
     btn.textContent = '📎';
-    btn.title = '上传附件';
+    btn.title = '上传附件 (PDF/Word/TXT/代码)';
     btn.style.background = '';
     btn.style.borderColor = '';
     btn.style.color = '';
-    btn.oncontextmenu = null;
     userInput.placeholder = '输入消息，或点击🎤语音说话...';
   }
 }
