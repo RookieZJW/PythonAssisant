@@ -284,9 +284,12 @@ body::before{
 .input-row{display:flex; gap:12px; align-items:flex-end}
 .input-wrapper{
   flex:1; position:relative;
-  background:var(--bg-card); border-radius:var(--radius);
+  background:transparent; border-radius:var(--radius);
   border:1px solid var(--border); transition:var(--transition);
-  opacity:var(--input-opacity2);
+}
+.input-wrapper::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:var(--bg-card); opacity:var(--input-opacity2);
 }
 .input-wrapper:focus-within{border-color:var(--accent); box-shadow:0 0 15px rgba(0,212,255,.1)}
 .input-wrapper textarea{
@@ -297,20 +300,28 @@ body::before{
 .input-wrapper textarea::placeholder{color:var(--text-dim)}
 .send-btn{
   width:48px; height:48px; border-radius:var(--radius);
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#fff; border:none; cursor:pointer; font-size:20px;
+  background:transparent; color:#fff; border:none; cursor:pointer; font-size:20px;
   transition:var(--transition); flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.send-btn::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
   opacity:var(--action-opacity);
 }
 .send-btn:hover{box-shadow:0 0 20px rgba(0,212,255,.4); transform:scale(1.05)}
 .send-btn:disabled{background:var(--border); box-shadow:none; transform:none; cursor:not-allowed}
 .mic-btn{
   width:48px; height:48px; border-radius:var(--radius);
-  background:var(--bg-card); color:var(--text); border:1px solid var(--border);
+  background:transparent; color:var(--text); border:1px solid var(--border);
   cursor:pointer; font-size:20px; transition:var(--transition); flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
-  opacity:var(--action-opacity);
+  position:relative;
+}
+.mic-btn::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:var(--bg-card); opacity:var(--action-opacity);
 }
 .mic-btn:hover{border-color:var(--accent2); box-shadow:0 0 15px rgba(123,47,255,.2)}
 .mic-btn.listening{
