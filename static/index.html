@@ -1607,8 +1607,15 @@ function applyBg(){
     video.className = 'bg-video';
     video.src = url; video.autoplay = true; video.loop = true; video.muted = true;
     video.playsInline = true;
-    video.style.display = mode==='full'?'block':'none';
-    document.body.appendChild(video);
+    video.style.display = (mode==='full'||mode==='chat')?'block':'none';
+    if(mode==='chat'){
+      const main = document.querySelector('.main');
+      main.insertBefore(video, main.firstChild);
+    } else {
+      document.body.appendChild(video);
+    }
+    video.load();
+    video.play().catch(e=>console.log('[BG] video play:',e));
     root.style.setProperty('--bg-image','none');
   } else {
     root.style.setProperty('--bg-image','url('+url+')');
@@ -1622,8 +1629,9 @@ function updateBgMode(){
   const root = document.documentElement;
   root.style.setProperty('--bg-mode',mode);
   const video = document.querySelector('.bg-video');
-  if(video) video.style.display = mode==='full'?'block':'none';
-  // Chat-only bg layer
+  if(video){
+    video.style.display = (mode==='full'||mode==='chat')?'block':'none';
+  }
   const main = document.querySelector('.main');
   if(mode==='chat' && root.style.getPropertyValue('--bg-image')!=='none'){
     if(!document.querySelector('.chat-bg-layer')){
