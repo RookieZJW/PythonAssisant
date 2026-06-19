@@ -1713,6 +1713,7 @@ function applyBg(){
   const type = document.getElementById('bgType').value;
   const mode = document.getElementById('bgMode').value;
   const root = document.documentElement;
+  console.log('[BG] applyBg called - url:', url, 'type:', type, 'mode:', mode);
   themeSettings.bgUrl = url;
   themeSettings.bgType = type;
   themeSettings.bgMode = mode;
@@ -1740,7 +1741,8 @@ function applyBg(){
       document.body.appendChild(video);
     }
     video.load();
-    video.play().catch(e=>console.log('[BG] video play:',e));
+    video.play().then(()=>console.log('[BG] video playing')).catch(e=>console.log('[BG] video play error:',e));
+    console.log('[BG] video appended, src:', video.src, 'display:', video.style.display);
     root.style.setProperty('--bg-image','none');
   } else {
     root.style.setProperty('--bg-image','url('+url+')');
