@@ -1820,7 +1820,7 @@ async function loadBgHistory(){
     let html = '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">📚 历史背景</div>';
     data.data.forEach(b=>{
       const icon = b.bg_type==='video'?'🎬':'🖼';
-      const u = b.url.replace(/'/g,"\\'");
+      const u = b.url.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px" onmouseover="this.style.background=\'var(--bg-card)\'" onmouseout="this.style.background=\'transparent\'">';
       html += '<span style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="applyBgFromHistory(\''+u+'\',\''+b.bg_type+'\',\''+b.mode+'\',\''+b.size+'\')">'+icon+' '+escHtml(decodeURIComponent(b.url.split('?path=')[1]||b.url).slice(-40))+'</span>';
       html += '<span style="cursor:pointer;color:#ff4455;font-size:14px" onclick="deleteBgHistory(\''+b.id+'\')">✕</span>';
