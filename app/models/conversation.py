@@ -10,10 +10,9 @@ class Conversation(db.Model):
     title = db.Column(db.String(200), nullable=False, default="新对话")
     user_id = db.Column(db.String(64), index=True, default="anonymous")
     model = db.Column(db.String(32), default="deepseek")
-    role_id = db.Column(db.String(36), nullable=True, default=None)  # 关联角色
+    role_id = db.Column(db.String(36), nullable=True, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_deleted = db.Column(db.Boolean, default=False)
 
     messages = db.relationship(
         'Message',

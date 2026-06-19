@@ -83,9 +83,7 @@ def stats():
     # 全部历史总计
     total_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).scalar()
     total_messages = db.session.query(func.count(Message.id)).scalar() or 0
-    total_convs = db.session.query(func.count(Conversation.id)).filter(
-        Conversation.is_deleted == False
-    ).scalar() or 0
+    total_convs = db.session.query(func.count(Conversation.id)).scalar() or 0
 
     # 用户输入 vs AI 输出
     user_tokens = db.session.query(func.coalesce(func.sum(Message.tokens), 0)).filter(
