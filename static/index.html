@@ -564,7 +564,6 @@ body::before{
     <!-- 透明度调节 -->
     <label style="margin-top:14px">透明度调节</label>
     <div class="slider-row"><span>聊天气泡</span><input type="range" id="opBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBubble">0%</span></div>
-    <div class="slider-row"><span>输入栏</span><input type="range" id="opInputBg" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInputBg">100%</span></div>
     <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">0%</span></div>
     <div class="slider-row"><span>下拉框</span><input type="range" id="opSelect" min="0" max="100" value="0" oninput="applyColors()"><span id="txtSelect">0%</span></div>
     <div class="slider-row"><span>��入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
@@ -1813,17 +1812,14 @@ function applyColors(){
   const r=document.documentElement;
   const obub=document.getElementById('opBubble').value/100;
   const obtn=document.getElementById('opBtn').value/100;
-  const oi=document.getElementById('opInputBg').value/100;
   const os=document.getElementById('opSelect').value/100;
   const oi2=document.getElementById('opInput2').value/100;
   r.style.setProperty('--bubble-opacity',obub);
   r.style.setProperty('--btn-opacity',obtn);
-  r.style.setProperty('--bg-card-opacity',oi);
   r.style.setProperty('--select-opacity',os);
   r.style.setProperty('--input-opacity2',oi2);
   document.getElementById('txtBubble').textContent=Math.round(obub*100)+'%';
   document.getElementById('txtBtn').textContent=Math.round(obtn*100)+'%';
-  document.getElementById('txtInputBg').textContent=Math.round(oi*100)+'%';
   document.getElementById('txtSelect').textContent=Math.round(os*100)+'%';
   document.getElementById('txtInput2').textContent=Math.round(oi2*100)+'%';
   saveTheme();
@@ -1998,7 +1994,6 @@ async function init(){
   // 初始透明度显示
   document.getElementById('txtBubble').textContent='0%';
   document.getElementById('txtBtn').textContent='0%';
-  document.getElementById('txtInputBg').textContent='0%';
   document.getElementById('txtSelect').textContent='0%';
   document.getElementById('txtInput2').textContent='0%';
 
