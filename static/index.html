@@ -627,6 +627,7 @@ let currentRoleId = '';
 let currentConvId = '';
 let currentModel = 'deepseek';
 let isStreaming = false;
+let abortController = null;
 let attachment = null;  // {filename, content, size, type}
 
 const msgBox = document.getElementById('messages');
@@ -1092,7 +1093,9 @@ async function sendMessage(){
   if(!message || isStreaming) return;
 
   isStreaming = true;
-  sendBtn.disabled = true;
+  abortController = new AbortController();
+  sendBtn.textContent = '⏹'; sendBtn.style.background = '#ef4444';
+  sendBtn.disabled = false;
   userInput.value = '';
   userInput.style.height = 'auto';
   const userMsg = attachment ? '📎 '+attachment.filename+'\n'+message : message;
@@ -1112,7 +1115,7 @@ async function sendMessage(){
 
   try{
     const resp = await fetch('/api/v1/chat/stream',{
-      method:'POST',
+      method:'POST', signal: abortController.signal,
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         conversation_id: currentConvId,
@@ -1173,9 +1176,11 @@ async function sendMessage(){
 
   }catch(err){
     typingRow.remove();
-    addMsg('system','连接失败: '+err.message);
+    if(err.name!=='AbortError') addMsg('system','连接失败: '+err.message);
   }finally{
     isStreaming = false;
+    abortController = null;
+    sendBtn.textContent = '↑'; sendBtn.style.background = '';
     sendBtn.disabled = false;
     userInput.focus();
   }
@@ -1221,7 +1226,9 @@ userInput.addEventListener('input', function(){
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 150) + 'px';
 });
-sendBtn.addEventListener('click', sendMessage);
+sendBtn.addEventListener('click', ()=>{
+  if(isStreaming){ stopGeneration(); } else { sendMessage(); }
+});
 
 // Close modal on overlay click
 document.getElementById('roleModal').addEventListener('click', function(e){
@@ -1482,6 +1489,10 @@ async function handleFile(e){
     updateAttachUI();
   }catch(e){ alert('上传失败: '+e.message); }
   e.target.value = '';
+}
+
+function stopGeneration(){
+  if(abortController){ abortController.abort(); abortController=null; }
 }
 
 function toggleAttachment(){
