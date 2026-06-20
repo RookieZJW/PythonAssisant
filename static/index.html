@@ -24,7 +24,7 @@
   /* 聊天气泡阴影 */
   --bubble-shadow:0 4px 15px rgba(0,0,0,.25);
   --bubble-shadow-user:0 4px 20px rgba(123,47,255,.25);
-  --bubble-opacity:0; --btn-opacity:0;
+  --bubble-opacity:0.5; --btn-opacity:0;
   --select-opacity:0; --input-opacity2:0;
   --bubble-text:#fff; --select-bg:var(--bg-card);
 }
@@ -567,7 +567,7 @@ select{background:var(--select-bg)}
 
     <!-- 透明度调节 -->
     <label style="margin-top:14px">透明度调节</label>
-    <div class="slider-row"><span>聊天气泡</span><input type="range" id="opBubble" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBubble">0%</span></div>
+    <div class="slider-row"><span>聊天气泡</span><input type="range" id="opBubble" min="0" max="100" value="50" oninput="applyColors()"><span id="txtBubble">50%</span></div>
     <div class="slider-row"><span>按钮</span><input type="range" id="opBtn" min="0" max="100" value="0" oninput="applyColors()"><span id="txtBtn">0%</span></div>
     <div class="slider-row"><span>下拉框</span><input type="range" id="opSelect" min="0" max="100" value="0" oninput="applyColors()"><span id="txtSelect">0%</span></div>
     <div class="slider-row"><span>输入框</span><input type="range" id="opInput2" min="0" max="100" value="0" oninput="applyColors()"><span id="txtInput2">0%</span></div>
@@ -2114,7 +2114,7 @@ async function init(){
   updateRoleButtons();
 
   // 初始透明度显示
-  document.getElementById('txtBubble').textContent='0%';
+  document.getElementById('txtBubble').textContent='50%';
   document.getElementById('txtBtn').textContent='0%';
   document.getElementById('txtSelect').textContent='0%';
   document.getElementById('txtInput2').textContent='0%';
