@@ -488,7 +488,7 @@ select{background:var(--select-bg)}
       <button class="mic-btn" id="attachBtn" title="上传附件" onclick="toggleAttachment()">📎</button>
       <input type="file" id="fileInput" onchange="handleFile(event)" style="display:none" accept=".txt,.pdf,.docx,.doc,.md,.py,.js,.html,.css,.json,.xml,.csv">
       <button class="mic-btn" id="micBtn" title="语音输入">🎤</button>
-      <button class="send-btn" id="sendBtn" title="发送">▶</button>
+      <button class="send-btn" id="sendBtn" title="发送"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
     </div>
     <div class="voice-settings">
       <span style="font-size:11px;color:var(--text-dim)">TTS:</span>
@@ -1092,7 +1092,7 @@ async function sendMessage(){
 
   isStreaming = true;
   abortController = new AbortController();
-  sendBtn.textContent = '⏹'; sendBtn.style.color = '#ef4444'; sendBtn.style.borderColor = '#ef4444';
+  sendBtn.innerHTML = '⏹'; sendBtn.style.color = '#ef4444'; sendBtn.style.borderColor = '#ef4444'; sendBtn.style.fontSize = '18px';
   sendBtn.disabled = false;
   userInput.value = '';
   userInput.style.height = 'auto';
@@ -1178,7 +1178,7 @@ async function sendMessage(){
   }finally{
     isStreaming = false;
     abortController = null;
-    sendBtn.textContent = '▶';
+    sendBtn.innerHTML = '<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"22\" y1=\"2\" x2=\"11\" y2=\"13\"></line><polygon points=\"22 2 15 22 11 13 2 9 22 2\"></polygon></svg>'; sendBtn.style.color = ''; sendBtn.style.borderColor = ''; sendBtn.style.fontSize = '';
     sendBtn.disabled = false;
     userInput.focus();
   }
