@@ -9,7 +9,7 @@
 /* ========== Reset & Base ========== */
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg-deep:#09090b; --bg-panel:#121217; --bg-card:#1a1a23;
+  --bg-deep:#09090b; --bg-panel:#12121a; --bg-card:#1a1a28;
   --accent:#818cf8; --accent2:#6366f1; --accent3:#a5b4fc;
   --text:#d4d4d8; --text-dim:#71717a; --border:#27272a;
   --user-bg:linear-gradient(135deg,#6366f1,#4f46e5);
@@ -1536,94 +1536,163 @@ document.addEventListener('keydown', function(e){
 
 // ==================== THEME SYSTEM ====================
 const PRESETS = {
-  nocturne:{name:'夜曲',colors:{
-    '--bg-deep':'#09090b','--bg-panel':'#121217','--bg-card':'#1a1a23',
+  // ============================================================
+  // DARK THEMES (8) — Utility-first, high readability
+  // ============================================================
+
+  // 1. Indigo — Default. Calm, focused, professional.
+  indigo:{name:'靛蓝',colors:{
+    '--bg-deep':'#09090b','--bg-panel':'#12121a','--bg-card':'#1a1a28',
     '--accent':'#818cf8','--accent2':'#6366f1','--accent3':'#a5b4fc',
-    '--text':'#d4d4d8','--text-dim':'#71717a','--border':'#27272a',
-    '--user-bg':'linear-gradient(135deg,#6366f1,#4f46e5)','--ai-bg':'linear-gradient(135deg,#6366f1,#4f46e5)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(99,102,241,.25)','--bubble-text':'#fff'
+    '--text':'#e4e4e7','--text-dim':'#71717a','--border':'#27272d',
+    '--user-bg':'linear-gradient(135deg,#6366f1,#4f46e5)',
+    '--ai-bg':'linear-gradient(135deg,#6366f1,#4f46e5)',
+    '--bubble-shadow':'0 4px 20px rgba(99,102,241,.18)',
+    '--bubble-shadow-user':'0 4px 24px rgba(99,102,241,.28)',
+    '--bubble-text':'#fff'
   }},
-  graphite:{name:'石墨',colors:{
-    '--bg-deep':'#0d0d0d','--bg-panel':'#171717','--bg-card':'#212121',
-    '--accent':'#a3a3a3','--accent2':'#737373','--accent3':'#d4d4d4',
-    '--text':'#d6d6d6','--text-dim':'#737373','--border':'#2e2e2e',
-    '--user-bg':'linear-gradient(135deg,#525252,#404040)','--ai-bg':'linear-gradient(135deg,#525252,#404040)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.4)','--bubble-shadow-user':'0 4px 20px rgba(82,82,82,.2)','--bubble-text':'#fff'
+
+  // 2. Steel — Minimalist, cold, architectural
+  steel:{name:'钢铁',colors:{
+    '--bg-deep':'#0c0c0e','--bg-panel':'#16161a','--bg-card':'#1f1f25',
+    '--accent':'#a1a1aa','--accent2':'#71717a','--accent3':'#d4d4d8',
+    '--text':'#e4e4e7','--text-dim':'#71717a','--border':'#27272a',
+    '--user-bg':'linear-gradient(135deg,#71717a,#52525b)',
+    '--ai-bg':'linear-gradient(135deg,#71717a,#52525b)',
+    '--bubble-shadow':'0 4px 20px rgba(113,113,122,.15)',
+    '--bubble-shadow-user':'0 4px 24px rgba(113,113,122,.22)',
+    '--bubble-text':'#fff'
   }},
+
+  // 3. Ocean — Deep, immersive, calm
   ocean:{name:'深海',colors:{
-    '--bg-deep':'#030712','--bg-panel':'#0a1628','--bg-card':'#111f3a',
+    '--bg-deep':'#040a14','--bg-panel':'#0a1628','--bg-card':'#102040',
     '--accent':'#38bdf8','--accent2':'#0ea5e9','--accent3':'#7dd3fc',
-    '--text':'#b8d4f0','--text-dim':'#4b6a8a','--border':'#1a2f50',
-    '--user-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)','--ai-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(14,165,233,.25)','--bubble-text':'#fff'
+    '--text':'#d0e0f8','--text-dim':'#5880a8','--border':'#1a3050',
+    '--user-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)',
+    '--ai-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)',
+    '--bubble-shadow':'0 4px 20px rgba(14,165,233,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(14,165,233,.26)',
+    '--bubble-text':'#fff'
   }},
-  forest:{name:'松林',colors:{
-    '--bg-deep':'#030f08','--bg-panel':'#081a10','--bg-card':'#0d2818',
+
+  // 4. Emerald — Botanical, fresh, grounded
+  emerald:{name:'翡翠',colors:{
+    '--bg-deep':'#031008','--bg-panel':'#081a10','--bg-card':'#0e2818',
     '--accent':'#34d399','--accent2':'#10b981','--accent3':'#6ee7b7',
-    '--text':'#b8dcc8','--text-dim':'#4a8060','--border':'#163020',
-    '--user-bg':'linear-gradient(135deg,#10b981,#059669)','--ai-bg':'linear-gradient(135deg,#10b981,#059669)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(16,185,129,.2)','--bubble-text':'#fff'
+    '--text':'#c8e8d8','--text-dim':'#508868','--border':'#183020',
+    '--user-bg':'linear-gradient(135deg,#10b981,#059669)',
+    '--ai-bg':'linear-gradient(135deg,#10b981,#059669)',
+    '--bubble-shadow':'0 4px 20px rgba(16,185,129,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(16,185,129,.24)',
+    '--bubble-text':'#fff'
   }},
-  sakura:{name:'樱语',colors:{
-    '--bg-deep':'#0f0510','--bg-panel':'#1c0a18','--bg-card':'#2a0e24',
+
+  // 5. Rose — Soft, elegant, warm
+  rose:{name:'玫瑰',colors:{
+    '--bg-deep':'#0f0610','--bg-panel':'#1c0c1a','--bg-card':'#2a1228',
     '--accent':'#f472b6','--accent2':'#e11d8c','--accent3':'#f9a8d4',
-    '--text':'#e0c8d8','--text-dim':'#906078','--border':'#331428',
-    '--user-bg':'linear-gradient(135deg,#e11d8c,#c01674)','--ai-bg':'linear-gradient(135deg,#e11d8c,#c01674)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(225,29,140,.25)','--bubble-text':'#fff'
+    '--text':'#e8d0e0','--text-dim':'#987080','--border':'#341828',
+    '--user-bg':'linear-gradient(135deg,#e11d8c,#be185d)',
+    '--ai-bg':'linear-gradient(135deg,#e11d8c,#be185d)',
+    '--bubble-shadow':'0 4px 20px rgba(225,29,140,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(225,29,140,.26)',
+    '--bubble-text':'#fff'
   }},
-  ember:{name:'余烬',colors:{
-    '--bg-deep':'#0c0804','--bg-panel':'#1a0e06','--bg-card':'#281408',
+
+  // 6. Amber — Warm, rich, confident
+  amber:{name:'琥珀',colors:{
+    '--bg-deep':'#0c0804','--bg-panel':'#1a1006','--bg-card':'#281808',
     '--accent':'#f59e0b','--accent2':'#ea580c','--accent3':'#fbbf24',
-    '--text':'#d8c8b0','--text-dim':'#907050','--border':'#301c08',
-    '--user-bg':'linear-gradient(135deg,#ea580c,#c2410c)','--ai-bg':'linear-gradient(135deg,#ea580c,#c2410c)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.4)','--bubble-shadow-user':'0 4px 20px rgba(234,88,12,.2)','--bubble-text':'#fff'
+    '--text':'#e0d0b8','--text-dim':'#988060','--border':'#302008',
+    '--user-bg':'linear-gradient(135deg,#ea580c,#c2410c)',
+    '--ai-bg':'linear-gradient(135deg,#ea580c,#c2410c)',
+    '--bubble-shadow':'0 4px 20px rgba(234,88,12,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(234,88,12,.24)',
+    '--bubble-text':'#fff'
   }},
-  amethyst:{name:'紫晶',colors:{
-    '--bg-deep':'#080610','--bg-panel':'#120a20','--bg-card':'#1c1030',
+
+  // 7. Violet — Creative, premium, refined
+  violet:{name:'紫罗兰',colors:{
+    '--bg-deep':'#080612','--bg-panel':'#120c22','--bg-card':'#1c1432',
     '--accent':'#a78bfa','--accent2':'#7c3aed','--accent3':'#c4b5fd',
-    '--text':'#d0c4e8','--text-dim':'#706898','--border':'#261840',
-    '--user-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)','--ai-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.35)','--bubble-shadow-user':'0 4px 20px rgba(124,58,237,.25)','--bubble-text':'#fff'
+    '--text':'#d8d0f0','--text-dim':'#7870a0','--border':'#282040',
+    '--user-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)',
+    '--ai-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)',
+    '--bubble-shadow':'0 4px 20px rgba(124,58,237,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(124,58,237,.26)',
+    '--bubble-text':'#fff'
   }},
+
+  // 8. Matrix — Terminal, hacker, iconic
   matrix:{name:'矩阵',colors:{
-    '--bg-deep':'#000500','--bg-panel':'#000a00','--bg-card':'#001800',
+    '--bg-deep':'#000600','--bg-panel':'#000c00','--bg-card':'#001a00',
     '--accent':'#22c55e','--accent2':'#16a34a','--accent3':'#4ade80',
-    '--text':'#b3f0b3','--text-dim':'#338833','--border':'#002800',
-    '--user-bg':'linear-gradient(135deg,#16a34a,#15803d)','--ai-bg':'linear-gradient(135deg,#16a34a,#15803d)',
-    '--bubble-shadow':'0 4px 16px rgba(0,0,0,.45)','--bubble-shadow-user':'0 4px 20px rgba(22,163,74,.25)','--bubble-text':'#fff'
+    '--text':'#b8f0b8','--text-dim':'#3a883a','--border':'#002c00',
+    '--user-bg':'linear-gradient(135deg,#16a34a,#15803d)',
+    '--ai-bg':'linear-gradient(135deg,#16a34a,#15803d)',
+    '--bubble-shadow':'0 4px 20px rgba(22,163,74,.16)',
+    '--bubble-shadow-user':'0 4px 24px rgba(22,163,74,.26)',
+    '--bubble-text':'#fff'
   }},
-  stone:{name:'石灰',colors:{
-    '--bg-deep':'#f4f4f5','--bg-panel':'#ffffff','--bg-card':'#fafafa',
+
+  // ============================================================
+  // LIGHT THEMES (4) — Clean, professional, high contrast
+  // NO warm-beige/brass/oxblood palette (Section 4.2 ban)
+  // ============================================================
+
+  // 9. Zinc — Monochrome, modern, editorial
+  zinc:{name:'锌白',colors:{
+    '--bg-deep':'#f4f4f5','--bg-panel':'#fafafa','--bg-card':'#f0f0f0',
     '--accent':'#52525b','--accent2':'#3f3f46','--accent3':'#a1a1aa',
     '--text':'#18181b','--text-dim':'#71717a','--border':'#e4e4e7',
-    '--user-bg':'linear-gradient(135deg,#52525b,#3f3f46)','--ai-bg':'linear-gradient(135deg,#52525b,#3f3f46)',
-    '--bubble-shadow':'0 2px 12px rgba(0,0,0,.06)','--bubble-shadow-user':'0 2px 14px rgba(82,82,91,.18)','--bubble-text':'#fff'
+    '--user-bg':'linear-gradient(135deg,#52525b,#3f3f46)',
+    '--ai-bg':'linear-gradient(135deg,#52525b,#3f3f46)',
+    '--bubble-shadow':'0 2px 14px rgba(0,0,0,.06)',
+    '--bubble-shadow-user':'0 2px 16px rgba(82,82,91,.16)',
+    '--bubble-text':'#fff'
   }},
+
+  // 10. Mint — Fresh, calm, healthcare-grade
   mint:{name:'薄荷',colors:{
-    '--bg-deep':'#ecfdf5','--bg-panel':'#fafefc','--bg-card':'#f0fdf4',
+    '--bg-deep':'#ecfdf5','--bg-panel':'#f8fdf9','--bg-card':'#f0fdf4',
     '--accent':'#059669','--accent2':'#047857','--accent3':'#34d399',
-    '--text':'#064e3b','--text-dim':'#517a68','--border':'#d1fae5',
-    '--user-bg':'linear-gradient(135deg,#059669,#047857)','--ai-bg':'linear-gradient(135deg,#059669,#047857)',
-    '--bubble-shadow':'0 2px 12px rgba(0,0,0,.05)','--bubble-shadow-user':'0 2px 14px rgba(5,150,105,.15)','--bubble-text':'#fff'
+    '--text':'#064e3b','--text-dim':'#518068','--border':'#d1fae5',
+    '--user-bg':'linear-gradient(135deg,#059669,#047857)',
+    '--ai-bg':'linear-gradient(135deg,#059669,#047857)',
+    '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+    '--bubble-shadow-user':'0 2px 16px rgba(5,150,105,.14)',
+    '--bubble-text':'#fff'
   }},
+
+  // 11. Sky — Bright, open, trustworthy
   sky:{name:'晴空',colors:{
-    '--bg-deep':'#eff6ff','--bg-panel':'#fafcff','--bg-card':'#f0f6ff',
+    '--bg-deep':'#eff6ff','--bg-panel':'#f8fbff','--bg-card':'#f0f5ff',
     '--accent':'#2563eb','--accent2':'#1d4ed8','--accent3':'#60a5fa',
-    '--text':'#172554','--text-dim':'#506898','--border':'#dbeafe',
-    '--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)','--ai-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
-    '--bubble-shadow':'0 2px 12px rgba(0,0,0,.05)','--bubble-shadow-user':'0 2px 14px rgba(37,99,235,.15)','--bubble-text':'#fff'
+    '--text':'#172554','--text-dim':'#5870a0','--border':'#dbeafe',
+    '--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
+    '--ai-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
+    '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+    '--bubble-shadow-user':'0 2px 16px rgba(37,99,235,.14)',
+    '--bubble-text':'#fff'
   }},
+
+  // 12. Slate — Neutral, restrained, universal
   slate:{name:'板岩',colors:{
-    '--bg-deep':'#f1f5f9','--bg-panel':'#fafcff','--bg-card':'#f0f4f8',
+    '--bg-deep':'#f1f5f9','--bg-panel':'#f8fafc','--bg-card':'#eef2f6',
     '--accent':'#475569','--accent2':'#334155','--accent3':'#94a3b8',
     '--text':'#0f172a','--text-dim':'#64748b','--border':'#e2e8f0',
-    '--user-bg':'linear-gradient(135deg,#475569,#334155)','--ai-bg':'linear-gradient(135deg,#475569,#334155)',
-    '--bubble-shadow':'0 2px 12px rgba(0,0,0,.05)','--bubble-shadow-user':'0 2px 14px rgba(71,85,105,.15)','--bubble-text':'#fff'
+    '--user-bg':'linear-gradient(135deg,#475569,#334155)',
+    '--ai-bg':'linear-gradient(135deg,#475569,#334155)',
+    '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+    '--bubble-shadow-user':'0 2px 16px rgba(71,85,105,.14)',
+    '--bubble-text':'#fff'
   }},
 };
 
 
-let currentTheme = 'nocturne';
+
+let currentTheme = 'indigo';
 let themeSettings = {};
 
 function applyTheme(name){
@@ -1899,7 +1968,7 @@ function updateSliders(){
 }
 
 function resetTheme(){
-  applyTheme('nocturne');
+  applyTheme('indigo');
   clearBg();
   document.documentElement.style.setProperty('--panel-opacity','0');
   document.documentElement.style.setProperty('--header-opacity','0');
