@@ -25,6 +25,7 @@ def save_background():
         bg_type=data.get('type', 'image'),
         mode=data.get('mode', 'full'),
         size=data.get('size', 'cover'),
+        user_id=uid if uid else None,
     )
     return success(bg.to_dict(), "已保存")
 

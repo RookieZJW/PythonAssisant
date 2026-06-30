@@ -15,9 +15,9 @@ class Background(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @classmethod
-    def add(cls, url, bg_type='image', mode='full', size='cover'):
-        # 去重：相同 URL 不重复添加
-        existing = cls.query.filter_by(url=url).first()
+    def add(cls, url, bg_type='image', mode='full', size='cover', user_id=None):
+        # 去重：相同 URL + 相同用户不重复添加
+        existing = cls.query.filter_by(url=url, user_id=user_id).first()
         if existing:
             existing.bg_type = bg_type
             existing.mode = mode
@@ -26,7 +26,7 @@ class Background(db.Model):
             db.session.commit()
             return existing
 
-        bg = cls(url=url, bg_type=bg_type, mode=mode, size=size)
+        bg = cls(url=url, bg_type=bg_type, mode=mode, size=size, user_id=user_id)
         db.session.add(bg)
         db.session.commit()
         return bg
