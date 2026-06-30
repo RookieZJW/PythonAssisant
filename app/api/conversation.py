@@ -10,7 +10,7 @@
 - 获取会话消息列表
 - 导出会话为 Markdown / 文本文件
 """
-from flask import Blueprint, request, Response
+from flask import Blueprint, request, Response, session
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.role import Role
@@ -41,7 +41,7 @@ def create_conversation():
     data = request.get_json() or {}
     title = data.get('title', '新对话')
     model = data.get('model', 'deepseek')
-    user_id = data.get('user_id', 'anonymous')
+    user_id = session.get('user_id', data.get('user_id', 'anonymous'))
     role_id = data.get('role_id', None)
 
     conversation = Conversation.create(title=title, model=model, user_id=user_id, role_id=role_id)
@@ -65,9 +65,9 @@ def list_conversations():
     """
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
-    user_id = request.args.get('user_id', 'anonymous')
+    from flask import session; uid = session.get('user_id','')
 
-    result = Conversation.get_list(user_id=user_id, page=page, page_size=page_size)
+    result = Conversation.get_list(user_id=uid or 'anonymous', page=page, page_size=page_size)
     return success(result)
 
 

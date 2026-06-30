@@ -7,7 +7,7 @@
 - 更新角色信息（检测名称冲突，排除自身）
 - 删除角色
 """
-from flask import Blueprint, request
+from flask import Blueprint, request, session
 from app.models.role import Role
 from app.extensions import db
 from app.utils.response import success, error
@@ -26,7 +26,7 @@ def list_roles():
     返回:
         JSON 响应，包含角色对象列表（每个角色包含 id、name、prompt、icon 等字段）
     """
-    roles = Role.get_all()
+    uid = session.get('user_id',''); roles = Role.get_all(user_id=uid if uid else None)
     return success([r.to_dict() for r in roles])
 
 
@@ -62,7 +62,7 @@ def create_role():
     if existing:
         return error(f"角色「{name}」已存在，请使用其他名称", 409)
 
-    role = Role.create(name=name, prompt=prompt, icon=icon)
+    role = Role.create(name=name, prompt=prompt, icon=icon, user_id=session.get('user_id',''))
     return success(role.to_dict(), "角色创建成功")
 
 

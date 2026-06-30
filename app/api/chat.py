@@ -6,7 +6,7 @@
 - 流式（SSE）对话接口
 - 文件附件处理与上下文拼接
 """
-from flask import Blueprint, request, Response, stream_with_context
+from flask import Blueprint, request, Response, stream_with_context, session
 from app.services.chat_service import ChatService
 from app.services.model_service import ModelService
 from app.models.conversation import Conversation
@@ -112,7 +112,7 @@ def chat_stream():
         """
         try:
             # 步骤1: 准备对话上下文（包含历史消息加载和记忆注入）
-            conversation, memory, messages = ChatService.prepare_chat_context(
+            uid = session.get('user_id',''); conversation, memory, messages = ChatService.prepare_chat_context(
                 conversation_id, user_input, model_type, system_prompt, role_id
             )
 

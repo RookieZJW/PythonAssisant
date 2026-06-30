@@ -46,6 +46,7 @@ class Role(db.Model):
     name = db.Column(db.String(100), nullable=False)
     # 系统提示词：使用 Text 类型存储较长文本，定义角色的行为风格和知识背景
     prompt = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.String(64), nullable=True, default=None)
     # 角色图标：最大长度 10 字符（通常使用单个 Emoji），默认值为 '🤖'
     icon = db.Column(db.String(10), default='🤖')
     # 是否为内置角色：布尔值，True 表示系统预置，不可删除；False 表示用户自定义
@@ -56,7 +57,7 @@ class Role(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @classmethod
-    def create(cls, name, prompt, icon='🤖'):
+    def create(cls, name, prompt, icon='🤖', user_id=None):
         """
         创建新的自定义角色
 
@@ -72,14 +73,14 @@ class Role(db.Model):
             Role: 新创建并已持久化的角色实例
         """
         # 构造 Role 实例，默认 is_builtin=False（用户自定义角色）
-        role = cls(name=name, prompt=prompt, icon=icon, is_builtin=False)
+        role = cls(name=name, prompt=prompt, icon=icon, is_builtin=False, user_id=user_id)
         # 添加到数据库会话并提交事务
         db.session.add(role)
         db.session.commit()
         return role
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, user_id=None):
         """
         获取所有角色列表
 
@@ -90,7 +91,7 @@ class Role(db.Model):
             list: Role 实例列表，按"内置角色优先、按创建时间升序"排列
         """
         # 按 is_builtin 降序（内置角色在前），然后按创建时间升序排列
-        return cls.query.order_by(cls.is_builtin.desc(), cls.created_at.asc()).all()
+        return cls.query.filter((cls.is_builtin == True) | (cls.user_id == user_id) if user_id else cls.is_builtin == True).order_by(cls.is_builtin.desc(), cls.created_at.asc()).all()
 
     @classmethod
     def get_by_id(cls, role_id):
