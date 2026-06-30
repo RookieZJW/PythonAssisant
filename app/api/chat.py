@@ -50,6 +50,14 @@ def chat():
             system_prompt=data.get('system_prompt'),
             role_id=data.get('role_id'),
         )
+        # 将新会话绑定当前用户
+        uid = session.get('user_id','')
+        if uid and result:
+            conv = Conversation.query.get(result['conversation_id'])
+            if conv and (not conv.user_id or conv.user_id == 'anonymous'):
+                conv.user_id = uid
+                from app.extensions import db as _db3
+                _db3.session.commit()
         return success(result)
     except ValueError as e:
         # 参数校验错误，返回 400
@@ -115,6 +123,11 @@ def chat_stream():
             uid = session.get('user_id',''); conversation, memory, messages = ChatService.prepare_chat_context(
                 conversation_id, user_input, model_type, system_prompt, role_id
             )
+            # 将新创建的会话绑定到当前登录用户
+            if uid and (not conversation.user_id or conversation.user_id == 'anonymous'):
+                conversation.user_id = uid
+                from app.extensions import db as _db2
+                _db2.session.commit()
 
             # 步骤2: 获取模型客户端并开始流式生成
             model_client = ModelService.get_model_client(model_type, model_params)
