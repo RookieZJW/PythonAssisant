@@ -12,6 +12,7 @@ class Background(db.Model):
     bg_type = db.Column(db.String(10), default='image')  # image / video
     mode = db.Column(db.String(10), default='full')       # full / chat
     size = db.Column(db.String(20), default='cover')      # cover / contain / auto / 100% 100%
+    user_id = db.Column(db.String(64), nullable=True, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @classmethod
