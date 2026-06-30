@@ -125,6 +125,7 @@ def create_app(config_name=None):
     from .api.voice import voice_bp
     from .api.upload import upload_bp
     from .api.background_api import bg_bp
+    from .api.auth import auth_bp
 
     # 所有蓝图统一挂载在 /api/v1 前缀下
     app.register_blueprint(chat_bp, url_prefix='/api/v1')
@@ -134,16 +135,43 @@ def create_app(config_name=None):
     app.register_blueprint(voice_bp, url_prefix='/api/v1')
     app.register_blueprint(upload_bp, url_prefix='/api/v1')
     app.register_blueprint(bg_bp, url_prefix='/api/v1')
+    app.register_blueprint(auth_bp, url_prefix='/api/v1')
 
-    # 9. 首页路由 —— 返回聊天界面静态页面
+    # 9. 登录保护 —— 未登录用户重定向到登录页
+    from flask import session, redirect, request as _req
+
+    @app.before_request
+    def check_login():
+        """检查登录状态，未登录跳转到登录页"""
+        # 允许访问的路径（登录页、静态文件、auth API、登录相关）
+        allow = ['/login', '/static/', '/api/v1/auth/', '/api/v1/health']
+        path = _req.path
+        if any(path.startswith(p) for p in allow):
+            return None  # 放行
+        if not session.get('user_id'):
+            # API 请求返回 401 JSON，页面请求重定向
+            if path.startswith('/api/'):
+                from flask import jsonify
+                return jsonify({"code": 401, "message": "请先登录", "data": None}), 401
+            return redirect('/login')
+
+    # 10. 登录页面路由
+    @app.route('/login')
+    def login_page():
+        if session.get('user_id'):
+            return redirect('/')
+        return send_from_directory(
+            _os.path.join(app.root_path, '..', 'static'), 'login.html')
+
+    # 11. 首页路由 —— 返回聊天界面
     from flask import send_from_directory
-    import os
+    import os as _os
 
     @app.route('/')
     def index():
         """根路径路由，返回聊天界面的 HTML 文件"""
         return send_from_directory(
-            os.path.join(app.root_path, '..', 'static'),
+            _os.path.join(app.root_path, '..', 'static'),
             'index.html'
         )
 

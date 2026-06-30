@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>登录 - 智能助手</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei',sans-serif;background:#09090b;color:#d4d4d8;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#12121a;border:1px solid #27272a;border-radius:16px;padding:40px;width:420px;max-width:90vw}
+.card h2{text-align:center;color:#fff;font-size:24px;margin-bottom:8px}
+.card .sub{text-align:center;color:#71717a;font-size:13px;margin-bottom:24px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:12px;color:#71717a;margin-bottom:4px}
+.input-group input{width:100%;padding:12px 14px;background:#0d0d12;border:1px solid #27272a;border-radius:8px;color:#fff;font-size:14px;outline:none}
+.input-group input:focus{border-color:#818cf8}
+.input-row{display:flex;gap:8px}
+.input-row input{flex:1}
+.btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;transition:.2s}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-primary:hover{background:#4f46e5}
+.btn-outline{background:transparent;color:#818cf8;border:1px solid #27272a;margin-top:8px}
+.btn-outline:hover{background:#1a1a23}
+.btn-sms{background:transparent;color:#71717a;border:1px solid #27272a;padding:12px 16px;border-radius:8px;white-space:nowrap;font-size:13px;cursor:pointer}
+.btn-sms:hover{background:#1a1a23}
+.btn-sms:disabled{opacity:.5;cursor:not-allowed}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#71717a;font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#27272a}
+.social-row{display:flex;gap:12px}
+.social-btn{flex:1;padding:12px;border:1px solid #27272a;border-radius:8px;background:transparent;color:#d4d4d8;font-size:14px;cursor:pointer;text-align:center;transition:.2s}
+.social-btn:hover{background:#1a1a23}
+.error{color:#ef4444;font-size:12px;margin-top:4px;display:none}
+.success{color:#22c55e;font-size:12px;margin-top:4px;display:none}
+.link{text-align:center;margin-top:16px;font-size:13px;color:#71717a}
+.link a{color:#818cf8;text-decoration:none}
+.link a:hover{text-decoration:underline}
+.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #27272a}
+.tab{flex:1;text-align:center;padding:10px;color:#71717a;cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+.tab.active{color:#818cf8;border-bottom-color:#818cf8}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.qr-box{text-align:center;padding:20px}
+.qr-box .qr{width:180px;height:180px;background:#0d0d12;border:1px solid #27272a;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:60px}
+.qr-box p{font-size:12px;color:#71717a;margin-top:8px}
+.sms-countdown{color:#71717a;font-size:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🤖 智能助手</h2>
+  <div class="sub">登录后开始对话</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('password')">密码登录</div>
+    <div class="tab" onclick="switchTab('sms')">手机登录</div>
+    <div class="tab" onclick="switchTab('social')">扫码登录</div>
+  </div>
+
+  <!-- 密码登录 -->
+  <div class="tab-content active" id="tab-password">
+    <div class="input-group"><label>用户名</label><input id="loginUser" placeholder="输入用户名"></div>
+    <div class="input-group"><label>密码</label><input id="loginPass" type="password" placeholder="输入密码"></div>
+    <div class="error" id="loginError"></div>
+    <button class="btn btn-primary" onclick="login()" style="margin-top:8px">登 录</button>
+    <div class="link">没有账号？<a href="#" onclick="switchTab('password');showReg()">立即注册</a></div>
+  </div>
+
+  <!-- 手机登录 -->
+  <div class="tab-content" id="tab-sms">
+    <div class="input-group"><label>手机号</label><input id="smsPhone" placeholder="输入手机号"></div>
+    <div class="input-row">
+      <input id="smsCode" placeholder="验证码" style="flex:1">
+      <button class="btn-sms" id="smsBtn" onclick="sendSMS()">获取验证码</button>
+    </div>
+    <div class="error" id="smsError"></div>
+    <button class="btn btn-primary" onclick="smsLogin()" style="margin-top:8px">登录 / 注册</button>
+  </div>
+
+  <!-- 扫码登录 -->
+  <div class="tab-content" id="tab-social">
+    <div class="social-row">
+      <button class="social-btn" onclick="showQR('wechat')">
+        <div style="font-size:32px;margin-bottom:4px">💬</div>微信登录
+      </button>
+      <button class="social-btn" onclick="showQR('qq')">
+        <div style="font-size:32px;margin-bottom:4px">🐧</div>QQ登录
+      </button>
+    </div>
+    <div class="qr-box" id="qrBox" style="display:none">
+      <div class="qr" id="qrIcon">📱</div>
+      <p id="qrText">请使用手机扫码</p>
+      <p style="font-size:11px;color:#ef4444">* 需要企业资质认证，目前为演示</p>
+    </div>
+  </div>
+</div>
+
+<!-- 注册弹窗 -->
+<div class="card" id="regCard" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10">
+  <h2>注册账号</h2>
+  <div class="input-group"><label>用户名</label><input id="regUser" placeholder="至少2位"></div>
+  <div class="input-group"><label>密码</label><input id="regPass" type="password" placeholder="至少6位"></div>
+  <div class="error" id="regError"></div>
+  <button class="btn btn-primary" onclick="register()">注 册</button>
+  <button class="btn btn-outline" onclick="hideReg()">返回登录</button>
+</div>
+<div id="overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5" onclick="hideReg()"></div>
+
+<script>
+function switchTab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));document.querySelector('.tab:nth-child('+({password:1,sms:2,social:3}[t])+')').classList.add('active');document.getElementById('tab-'+t).classList.add('active')}
+function showReg(){document.getElementById('regCard').style.display='block';document.getElementById('overlay').style.display='block'}
+function hideReg(){document.getElementById('regCard').style.display='none';document.getElementById('overlay').style.display='none'}
+
+async function api(m,u,b){
+  const r=await fetch('/api/v1'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  return r.json()
+}
+
+async function login(){
+  const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value.trim();
+  if(!u||!p)return;
+  const d=await api('POST','/auth/login',{username:u,password:p});
+  if(d.code===200) location.href='/';
+  else document.getElementById('loginError').style.display='block',document.getElementById('loginError').textContent=d.message
+}
+
+async function register(){
+  const u=document.getElementById('regUser').value.trim(),p=document.getElementById('regPass').value.trim();
+  if(!u||!p)return;
+  const d=await api('POST','/auth/register',{username:u,password:p});
+  if(d.code===200) location.href='/';
+  else document.getElementById('regError').style.display='block',document.getElementById('regError').textContent=d.message
+}
+
+let smsTimer=0;
+async function sendSMS(){
+  const p=document.getElementById('smsPhone').value.trim();
+  if(!p||smsTimer>0)return;
+  const d=await api('POST','/auth/sms/send',{phone:p});
+  if(d.code===200){smsTimer=60;countdown()}
+}
+
+function countdown(){
+  const b=document.getElementById('smsBtn');
+  if(smsTimer>0){b.textContent=smsTimer+'s';b.disabled=true;smsTimer--;setTimeout(countdown,1000)}
+  else{b.textContent='获取验证码';b.disabled=false}
+}
+
+async function smsLogin(){
+  const p=document.getElementById('smsPhone').value.trim(),c=document.getElementById('smsCode').value.trim();
+  if(!p||!c)return;
+  const d=await api('POST','/auth/sms/login',{phone:p,code:c});
+  if(d.code===200) location.href='/';
+  else document.getElementById('smsError').style.display='block',document.getElementById('smsError').textContent=d.message
+}
+
+function showQR(type){
+  document.getElementById('qrBox').style.display='block';
+  document.getElementById('qrIcon').textContent=type==='wechat'?'💬':'🐧';
+  document.getElementById('qrText').textContent='请使用'+(type==='wechat'?'微信':'QQ')+'扫码';
+}
+</script>
+</body>
+</html>

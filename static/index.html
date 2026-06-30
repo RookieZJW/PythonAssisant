@@ -439,8 +439,12 @@
         <div class="logo">⚡</div>
         <div>
             <h2>AI Assistant</h2>
-            <div class="ver">v2.4 · Multi-Role + Voice</div>
+            <div class="ver">v2.4</div>
         </div>
+    </div>
+    <div id="userInfo" style="padding:6px 20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span id="userNick">加载中...</span>
+      <button class="header-btn" onclick="logout()" style="font-size:10px;padding:2px 8px">退出</button>
     </div>
     <div class="conv-list" id="convList">
         <!-- dynamic -->
@@ -2151,7 +2155,13 @@
     }
 
     // ==================== INIT ====================
+    async function loadUser(){
+      try{const d=await api('GET','/auth/me');if(d.code===200&&d.data)document.getElementById('userNick').textContent='👤 '+d.data.nickname}catch(e){}
+    }
+    async function logout(){await api('POST','/auth/logout');location.href='/login'}
+
     async function init(){
+      await loadUser();
       loadTheme();
       loadParams();
 
