@@ -51,8 +51,8 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#09090b;color:#d4d4d8;d
 
   <div class="tabs">
     <div class="tab active" onclick="switchTab('password')">密码登录</div>
-    <div class="tab" onclick="switchTab('sms')">手机登录</div>
-    <div class="tab" onclick="switchTab('social')">扫码登录</div>
+    <div class="tab" onclick="switchTab('sms')">手机登录 <span style="font-size:10px;background:#3f3f46;color:#a1a1aa;padding:1px 5px;border-radius:3px;margin-left:2px">暂不可用</span></div>
+    <div class="tab" onclick="switchTab('social')">扫码登录 <span style="font-size:10px;background:#3f3f46;color:#a1a1aa;padding:1px 5px;border-radius:3px;margin-left:2px">暂不可用</span></div>
   </div>
 
   <!-- 密码登录 -->
@@ -66,29 +66,28 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#09090b;color:#d4d4d8;d
 
   <!-- 手机登录 -->
   <div class="tab-content" id="tab-sms">
-    <div class="input-group"><label>手机号</label><input id="smsPhone" placeholder="输入手机号"></div>
+    <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#fbbf24;text-align:center">⚠ 此功能暂不可用 &nbsp;(短信服务需企业营业执照认证)</div>
+    <div class="input-group"><label>手机号</label><input id="smsPhone" placeholder="输入手机号" disabled></div>
     <div class="input-row">
-      <input id="smsCode" placeholder="验证码" style="flex:1">
-      <button class="btn-sms" id="smsBtn" onclick="sendSMS()">获取验证码</button>
+      <input id="smsCode" placeholder="验证码" style="flex:1" disabled>
+      <button class="btn-sms" id="smsBtn" disabled style="opacity:.4">获取验证码</button>
     </div>
     <div class="error" id="smsError"></div>
-    <button class="btn btn-primary" onclick="smsLogin()" style="margin-top:8px">登录 / 注册</button>
+    <button class="btn btn-primary" disabled style="opacity:.4;cursor:not-allowed">登录 / 注册</button>
   </div>
 
   <!-- 扫码登录 -->
   <div class="tab-content" id="tab-social">
+    <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#fbbf24;text-align:center">⚠ 此功能暂不可用 &nbsp;(微信/QQ 开放平台需企业营业执照认证)</div>
     <div class="social-row">
-      <button class="social-btn" onclick="showQR('wechat')">
+      <button class="social-btn" disabled style="opacity:.4;cursor:not-allowed">
         <div style="font-size:32px;margin-bottom:4px">💬</div>微信登录
+        <div style="font-size:10px;color:#fbbf24;margin-top:2px">暂不可用</div>
       </button>
-      <button class="social-btn" onclick="showQR('qq')">
+      <button class="social-btn" disabled style="opacity:.4;cursor:not-allowed">
         <div style="font-size:32px;margin-bottom:4px">🐧</div>QQ登录
+        <div style="font-size:10px;color:#fbbf24;margin-top:2px">暂不可用</div>
       </button>
-    </div>
-    <div class="qr-box" id="qrBox" style="display:none">
-      <div class="qr" id="qrIcon">📱</div>
-      <p id="qrText">请使用手机扫码</p>
-      <p style="font-size:11px;color:#ef4444">* 需要企业资质认证，目前为演示</p>
     </div>
   </div>
 </div>
