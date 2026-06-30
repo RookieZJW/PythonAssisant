@@ -9,7 +9,8 @@ bg_bp = Blueprint('background_api', __name__)
 @bg_bp.route('/backgrounds', methods=['GET'])
 def list_backgrounds():
     """获取背景历史列表"""
-    uid = session.get('user_id',''); items = Background.query.filter_by(user_id=uid).order_by(Background.created_at.desc()).limit(20).all(); items = [b.to_dict() for b in items]
+    uid = session.get('user_id','')
+    items = Background.query.filter_by(user_id=uid).order_by(Background.created_at.desc()).limit(20).all()
     return success([b.to_dict() for b in items])
 
 
