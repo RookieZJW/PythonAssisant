@@ -1,4 +1,16 @@
 
+-- ============================================
+-- Python 智能助手 - 数据库结构
+-- 数据库名: smart_assistant
+-- 字符集: utf8mb4
+-- ============================================
+
+CREATE DATABASE IF NOT EXISTS smart_assistant
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE smart_assistant;
+
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
