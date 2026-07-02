@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Python 智能助手 - 项目技术汇报</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--pri:#006D77;--sec:#83C5BE;--bg:#EDF6F9;--card:#fff;--text:#1a2b2c;--dim:#588088}
+body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+.slide{width:100vw;height:100vh;display:none;padding:4vh 5vw;flex-direction:column;overflow:hidden}
+.slide.active{display:flex}
+h1{font-size:min(4.5vh,2.5vw);color:var(--pri);margin-bottom:1vh;font-weight:900}
+h2{font-size:min(2.6vh,1.4vw);color:var(--dim);margin-bottom:2vh;font-weight:400}
+.cover{justify-content:center;align-items:center;text-align:center}
+.cover h1{font-size:min(9vh,5vw);margin-bottom:2vh}
+.cover .sub{font-size:min(4vh,2.2vw);color:var(--sec)}
+.cover .sub2{font-size:min(3vh,1.6vw);color:var(--dim);margin-top:1vh}
+
+.grid{display:grid;gap:1.5vh 1.5vw;flex:1;align-content:stretch}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g6{grid-template-columns:repeat(3,1fr)}
+
+.card{background:var(--card);border-radius:1.2vh;padding:1.8vh 1.5vw;box-shadow:0 1px 6px rgba(0,0,0,.04);border:1px solid rgba(0,109,119,.08);display:flex;flex-direction:column;justify-content:center}
+.card h3{color:var(--pri);font-size:min(2.8vh,1.5vw);margin-bottom:.6vh}
+.card p{color:var(--dim);font-size:min(2.2vh,1.15vw);line-height:1.65}
+.card .num{font-size:min(6vh,3vw);color:var(--sec);font-weight:900;line-height:1;margin-bottom:.5vh}
+
+.code-box{background:#fff;border:1px solid rgba(0,109,119,.1);border-radius:1vh;padding:1.5vh 1.5vw;font-family:'Consolas','Courier New',monospace;font-size:min(1.8vh,1vw);line-height:1.85;color:var(--text);flex:1;overflow:hidden;white-space:pre}
+.code-box .k{color:var(--pri);font-weight:700}
+.code-box .s{color:var(--dim)}
+.code-box .v{color:var(--pri);background:rgba(131,197,190,.15);padding:0 2px;border-radius:2px}
+.code-box .tab{padding-left:1.5vw}
+
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:min(2vh,1.1vw);border-radius:1vh;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.04)}
+td,th{padding:1.2vh 1.2vw;border-bottom:1px solid rgba(0,109,119,.06)}
+th{background:var(--pri);color:#fff;font-weight:700}
+td{color:var(--dim);background:var(--card)}
+tr:last-child td{border-bottom:none}
+
+.row{display:flex;gap:1.5vw;flex:1}
+.col{flex:1;display:flex;flex-direction:column;gap:1.2vh}
+
+.pn{position:fixed;bottom:2vh;right:3vw;color:rgba(0,109,119,.25);font-size:min(3vh,1.8vw);font-weight:900;z-index:10;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: 封面 -->
+<div class="slide active cover">
+  <h1>Python 多功能智能助手</h1>
+  <div class="sub">基于 Flask + LangChain 的多模型 AI 对话系统</div>
+  <div class="sub2">项目技术汇报</div>
+</div>
+
+<!-- SLIDE 2: 功能全景 -->
+<div class="slide">
+  <h1>功能全景</h1>
+  <h2>支持语音对话、多角色、主题自定义、文件上传的 AI 助手</h2>
+  <div class="grid g3">
+    <div class="card"><div class="num">01</div><h3>多模型切换</h3><p>DeepSeek + 通义千问双模型<br>统一接口一键切换</p></div>
+    <div class="card"><div class="num">02</div><h3>流式 Markdown</h3><p>SSE Token 级实时输出<br>Markdown 边出边排版</p></div>
+    <div class="card"><div class="num">03</div><h3>语音对话</h3><p>浏览器 STT + 双引擎 TTS<br>11 种自然音色</p></div>
+    <div class="card"><div class="num">04</div><h3>角色系统</h3><p>6 内置 + 无限自定义<br>对话-角色独立绑定</p></div>
+    <div class="card"><div class="num">05</div><h3>主题 & 附件</h3><p>12 套主题 + 透明度调节<br>上传文件 AI 基于内容回答</p></div>
+    <div class="card"><div class="num">06</div><h3>生产就绪</h3><p>Docker + Gunicorn + Nginx<br>Token 统计 + 对话导出</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 3: 技术栈 -->
+<div class="slide">
+  <h1>技术栈</h1>
+  <table>
+    <tr><th style="width:16%">层级</th><th style="width:28%">技术</th><th>说明</th></tr>
+    <tr><td>Web 框架</td><td>Flask 3.x + SocketIO</td><td>HTTP + WebSocket，6 蓝图 20+ API</td></tr>
+    <tr><td>AI 模型</td><td>LangChain + DeepSeek/Qwen</td><td>策略模式统一接口，同步/流式调用</td></tr>
+    <tr><td>数据库</td><td>MySQL 8.0 + SQLAlchemy ORM</td><td>4 张表 utf8mb4，ORM 无需手写 SQL</td></tr>
+    <tr><td>缓存 / 限流</td><td>Redis 7.0</td><td>滑动窗口限流，不可用时自动降级</td></tr>
+    <tr><td>语音 STT</td><td>Web Speech API</td><td>浏览器内置，免费，说完自动发送</td></tr>
+    <tr><td>语音 TTS</td><td>火山引擎 + 腾讯云</td><td>双引擎 11 音色，失败兜底浏览器朗读</td></tr>
+    <tr><td>前端</td><td>原生 HTML/CSS/JS</td><td>单文件 SPA，零框架，约 1,900 行</td></tr>
+    <tr><td>部署</td><td>Gunicorn + Nginx + Docker</td><td>proxy_buffering off (SSE 关键配置)</td></tr>
+  </table>
+</div>
+
+<!-- SLIDE 4: 系统架构 -->
+<div class="slide">
+  <h1>系统架构</h1>
+  <h2>分层设计：路由层 → 服务层 → LLM 层 → 持久层</h2>
+  <div class="row">
+    <div class="col" style="flex:1.2">
+      <div class="code-box">
+<span class="s">浏览器</span> (语音STT + 粒子UI + SSE流式)
+    │  <span class="s">HTTP / SSE / WebSocket</span>
+    ▼
+<span class="s">Nginx</span> → <span class="s">Gunicorn + gevent</span>
+    │
+    ▼
+<span class="k">Flask 应用工厂</span>
+  ├── <span class="k">API 路由层</span> (6蓝图 20+接口)
+  │     chat / conversation / role / voice / system / upload
+  ├── <span class="k">业务服务层</span>
+  │     ChatService / ModelService / ToolService
+  ├── <span class="k">LLM 调用层</span> (策略模式)
+  │     DeepSeekClient / QwenClient / Memory
+  ├── <span class="k">中间件层</span>
+  │     Auth / RateLimit(Redis) / Logger
+  └── <span class="k">数据模型层</span>
+        Conversation / Message / Role / User
+            │
+            ▼
+        <span class="v">MySQL 8.0</span> + <span class="v">Redis 7.0</span></div>
+    </div>
+    <div class="col" style="flex:0.8">
+      <div class="card"><h3>策略模式</h3><p>BaseLLMClient 定义统一接口，各模型独立实现。ModelService 工厂方法动态创建</p></div>
+      <div class="card"><h3>应用工厂模式</h3><p>create_app() 统一创建 Flask 实例，根据 FLASK_ENV 加载不同配置</p></div>
+      <div class="card"><h3>注册表模式</h3><p>ToolService._tools 字典管理工具，新增只需注册，不改调度逻辑</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: 对话流程 -->
+<div class="slide">
+  <h1>核心功能：对话流程</h1>
+  <h2>从用户输入到 AI 流式回复的完整链路</h2>
+  <div class="row">
+    <div class="col" style="flex:1.1">
+      <div class="code-box">
+<span class="k">1.</span> 用户打字/语音 → POST /api/v1/chat/stream
+
+<span class="k">2.</span> Flask → ChatService.prepare_chat_context()
+    <span class="s">加载角色 System Prompt</span>
+    <span class="s">从 MySQL 加载历史 (滑动窗口10轮)</span>
+    <span class="s">组装: [System, 历史..., User新消息]</span>
+
+<span class="k">3.</span> ModelService 获取模型客户端
+
+<span class="k">4.</span> DeepSeek/Qwen 流式返回
+    <span class="s">json.dumps 编码每个 chunk</span>
+
+<span class="k">5.</span> SSE → marked.js 实时 Markdown 渲染
+
+<span class="k">6.</span> 完成: 持久化MySQL + Token统计 + TTS朗读
+      </div>
+    </div>
+    <div class="col" style="flex:0.9">
+      <div class="card"><h3>JSON-SSE 换行保护</h3><p>chunk 用 json.dumps 编码，前端 JSON.parse 解码。换行符不再被 split('\\n') 吃掉，Markdown 代码块语法完整</p></div>
+      <div class="card"><h3>流式 Markdown</h3><p>每个 chunk 调 marked.parse() 实时渲染，完成后 hljs 高亮。CDN 未加载时内置正则兜底</p></div>
+      <div class="card"><h3>停止生成</h3><p>AbortController + fetch signal。用户点停止 → abort() 中断流，已输出内容保留</p></div>
+      <div class="card"><h3>模型参数面板</h3><p>Temperature / MaxTokens / Top-P 滑块实时调节，覆盖默认值，localStorage 持久化</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: TTS 语音 -->
+<div class="slide">
+  <h1>语音功能</h1>
+  <h2>3 引擎 11 音色，浏览器语音输入 + 服务端语音合成</h2>
+  <div class="row">
+    <div class="col">
+      <div class="card" style="flex:1"><h3>🎤 语音输入 (STT)</h3><p>浏览器 SpeechRecognition API，免费，continuous=false 说完自动停止，实时填入输入框并自动发送。Ctrl+M 快捷键。配有麦克风诊断工具页面</p></div>
+      <div class="card" style="flex:1.5"><h3>🔊 语音输出 — 火山引擎 (8 音色)</h3><p>小源(BV700)/大夏(BV701)/清心(BV001)/知行(BV002)/知性(BV004)/彤彤(BV005)/小艾(BV402)/大庆(BV401)。Bearer Token 认证，POST 字节跳动 API，返回 base64 MP3 → 前端 Blob 播放</p></div>
+    </div>
+    <div class="col">
+      <div class="card" style="flex:1"><h3>🔊 语音输出 — 腾讯云 (3 音色)</h3><p>智瑜(1001)/智美(1003)/智聆精品(1050)。tencentcloud-sdk-python-tts SDK，SecretId/Key 认证，VoiceType 指定音色</p></div>
+      <div class="card" style="flex:1.5"><h3>发送前清洗 + 失败兜底</h3><p>cleanForTTS() 去除 Markdown 语法(代码块/粗体/链接/标题)，只保留纯朗读文字。腾讯云限 150 字自动截断。API 失败自动切浏览器 speechSynthesis</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: 数据库 -->
+<div class="slide">
+  <h1>数据库设计</h1>
+  <h2>MySQL 8.0 utf8mb4, ORM 操作, 4 张核心表</h2>
+  <div class="row">
+    <div class="col" style="flex:1.2">
+      <div class="code-box">
+<span class="k">conversations</span> (会话表)
+  id VARCHAR(36) PK / title VARCHAR(200) / user_id INDEX
+  model VARCHAR(32) / role_id VARCHAR(36) / created_at / updated_at
+
+<span class="k">messages</span> (消息表)
+  id INT PK AUTO_INC / conversation_id FK / role VARCHAR(16)
+  content TEXT / tokens INT / created_at
+
+<span class="k">roles</span> (角色表)
+  id VARCHAR(36) PK / name VARCHAR(100) / prompt TEXT
+  icon VARCHAR(10) / is_builtin BOOLEAN / created_at / updated_at
+
+<span class="k">users</span> (用户表)
+  id VARCHAR(64) PK / api_key UNIQUE / quota / created_at
+      </div>
+    </div>
+    <div class="col" style="flex:0.8">
+      <div class="card"><h3>ORM 映射</h3><p>SQLAlchemy db.Model 定义表结构，Python 操作数据库无需手写 SQL。首次启动 db.create_all() 自动建表</p></div>
+      <div class="card"><h3>Token 估算</h3><p>中文字符 x1.5 + 英文单词 x0.3 + 数字 x0.5 + 其他 x1.0。每条消息创建时自动计算</p></div>
+      <div class="card"><h3>硬删除机制</h3><p>删除会话时先批量 DELETE messages WHERE conversation_id=X，再 DELETE conversation，彻底清理</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8: API -->
+<div class="slide">
+  <h1>API 接口一览</h1>
+  <h2>20+ RESTful 接口，6 个蓝图分组</h2>
+  <table>
+    <tr><th style="width:12%">蓝图</th><th style="width:8%">方法</th><th style="width:34%">路径</th><th>说明</th></tr>
+    <tr><td rowspan="2">chat</td><td>POST</td><td>/api/v1/chat</td><td>普通对话 (同步)</td></tr>
+    <tr><td>POST</td><td>/api/v1/chat/stream</td><td>流式对话 (SSE)</td></tr>
+    <tr><td rowspan="4">conversation</td><td>GET/POST</td><td>/api/v1/conversations</td><td>会话列表 / 创建</td></tr>
+    <tr><td>GET/PUT/DELETE</td><td>/api/v1/conversations/{id}</td><td>详情 / 改名 / 删除</td></tr>
+    <tr><td>GET</td><td>/api/v1/conversations/{id}/messages</td><td>消息列表</td></tr>
+    <tr><td>GET</td><td>/api/v1/conversations/{id}/export</td><td>导出 Markdown 文件</td></tr>
+    <tr><td rowspan="4">role</td><td>GET/POST</td><td>/api/v1/roles</td><td>角色列表 / 创建 (同名检测)</td></tr>
+    <tr><td>PUT/DELETE</td><td>/api/v1/roles/{id}</td><td>更新 / 删除</td></tr>
+    <tr><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td></tr>
+    <tr><td rowspan="2">voice</td><td>POST</td><td>/api/v1/tts</td><td>TTS 文本转语音</td></tr>
+    <tr><td>GET</td><td>/api/v1/voices</td><td>音色列表</td></tr>
+    <tr><td rowspan="5">system</td><td>GET</td><td>/api/v1/health</td><td>健康检查</td></tr>
+    <tr><td>GET</td><td>/api/v1/models</td><td>模型列表</td></tr>
+    <tr><td>GET</td><td>/api/v1/stats</td><td>Token 统计</td></tr>
+    <tr><td>GET/POST</td><td>/api/v1/tools/{name}</td><td>工具列表/执行</td></tr>
+    <tr><td>GET</td><td>/api/v1/local-media?path=</td><td>本地文件代理</td></tr>
+    <tr><td>upload</td><td>POST</td><td>/api/v1/upload</td><td>文件上传</td></tr>
+  </table>
+</div>
+
+<!-- SLIDE 9: 前端亮点 -->
+<div class="slide">
+  <h1>前端技术亮点</h1>
+  <h2>单文件 SPA (~1,900行)，零框架依赖，纯原生 HTML/CSS/JS</h2>
+  <div class="grid g3">
+    <div class="card"><h3>实时 Markdown</h3><p>marked.js + highlight.js 流式渲染，JSON-SSE 换行保护，代码块高亮+复制按钮</p></div>
+    <div class="card"><h3>12 套主题</h3><p>CSS 变量驱动主题切换，伪元素背景透明度(文字不受影响)，背景图/视频+历史记录</p></div>
+    <div class="card"><h3>Canvas 粒子</h3><p>80 个粒子+近距离连线动画，requestAnimationFrame 60fps</p></div>
+    <div class="card"><h3>附件上传</h3><p>📎 上传 PDF/Word/TXT，FormData→后端解析→注入 AI 上下文</p></div>
+    <div class="card"><h3>对话导出</h3><p>从 DOM 直接抓取消息→生成 .md 文件，Blob 下载，不调后端</p></div>
+    <div class="card"><h3>停止生成</h3><p>AbortController 中断 fetch，发送/停止按钮动态切换</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 10: 目录结构 -->
+<div class="slide">
+  <h1>项目目录结构</h1>
+  <h2>40+ Python 文件，模块化分层设计</h2>
+  <div class="row">
+    <div class="col" style="flex:1.3">
+      <div class="code-box">
+<span class="k">PythonAssistant/</span>
+├── run.py                 <span class="s">启动入口</span>
+├── requirements.txt       <span class="s">依赖清单</span>
+├── .env                   <span class="s">环境变量</span>
+├── <span class="k">app/</span>
+│   ├── __init__.py         <span class="s">应用工厂 + 角色初始化</span>
+│   ├── config/             <span class="s">settings.py + prompts.py</span>
+│   ├── models/             <span class="s">conversation/message/role/user</span>
+│   ├── llm/                <span class="s">base / deepseek / qwen / memory</span>
+│   ├── services/           <span class="s">chat / model / tool 服务</span>
+│   ├── api/                <span class="s">6 个蓝图 (20+ API)</span>
+│   ├── tools/              <span class="s">计算器/数据分析/搜索</span>
+│   ├── middleware/        <span class="s">认证/限流/日志</span>
+│   └── utils/              <span class="s">响应/异常/校验</span>
+├── <span class="k">static/</span>                <span class="s">前端 SPA + 简历 + PPT</span>
+├── <span class="k">tests/</span>                 <span class="s">单元测试</span>
+└── <span class="k">docs/</span>                   <span class="s">README / deploy / 入门指南</span>
+      </div>
+    </div>
+    <div class="col" style="flex:0.7">
+      <div class="card"><h3>分层原则</h3><p>每层只依赖下一层：API → Service → LLM/Model。上层不关心下层实现细节</p></div>
+      <div class="card"><h3>蓝图注册</h3><p>每个功能模块独立蓝图，统一挂载 /api/v1 前缀</p></div>
+      <div class="card"><h3>配置分离</h3><p>.env 存 API Key，settings.py 三环境配置，gitignore 排除 .env</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 11: 总结 -->
+<div class="slide">
+  <h1>部署方案 & 项目总结</h1>
+  <div class="row">
+    <div class="col">
+      <div class="card" style="flex:1"><h3>开发模式</h3><p>python run.py → localhost:5000<br>Flask + SocketIO，一台电脑即可</p></div>
+      <div class="card" style="flex:1"><h3>生产模式</h3><p>Gunicorn + gevent + Nginx<br>proxy_buffering off (SSE 必须)<br>Supervisor 进程守护</p></div>
+      <div class="card" style="flex:1"><h3>Docker</h3><p>docker compose up -d<br>一键部署，环境隔离</p></div>
+    </div>
+    <div class="col">
+      <div class="card" style="flex:1"><h3>项目统计</h3><p>40+ Python 文件 | 20+ API | 6 蓝图 | 1,900+ 行前端<br>12 套主题 | 11 种 TTS | 4 张数据表</p></div>
+      <div class="card" style="flex:1.5"><h3>核心技术亮点</h3><p>✓ LangChain 策略模式集成双模型<br>✓ JSON-SSE 解决流式 Markdown 换行断链<br>✓ CSS 变量+伪元素实现背景/文字分离透明度<br>✓ 双引擎 TTS + 失败自动兜底<br>✓ 全中文注释 + 零基础入门文档</p></div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:2vh;font-size:min(2.5vh,1.5vw);color:var(--sec);font-weight:700">GitHub: github.com/RookieZJW/PythonAssisant</div>
+</div>
+
+<div class="pn" id="pageNum">1/11</div>
+
+<script>
+let c=0;const s=document.querySelectorAll('.slide'),t=s.length;
+function show(n){s[c].classList.remove('active');c=(n+t)%t;s[c].classList.add('active');document.getElementById('pageNum').textContent=(c+1)+'/'+t}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();show(c+1)}if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();show(c-1)}});
+</script>
+</body>
+</html>
