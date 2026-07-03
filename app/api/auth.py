@@ -124,6 +124,36 @@ def logout():
     return success(None, "已退出")
 
 
+# ---- 会员/VIP 管理 ----
+@auth_bp.route('/vip/upgrade', methods=['POST'])
+def vip_upgrade():
+    """升级VIP（管理接口，生产环境需加管理员权限）"""
+    data = request.get_json() or {}
+    user_id = data.get('user_id') or session.get('user_id','')
+    days = data.get('days', 30)
+    user = User.upgrade_vip(user_id, days)
+    if not user: return error("用户不存在", 404)
+    return success(user.to_dict(), f"已升级VIP，有效期至 {user.vip_expire.strftime('%Y-%m-%d')}")
+
+@auth_bp.route('/vip/stats', methods=['GET'])
+def vip_stats():
+    """查询当前用户用量"""
+    uid = session.get('user_id','')
+    if not uid: return error("未登录", 401)
+    user = User.find_by_id(uid)
+    if not user: return error("用户不存在", 404)
+    can, remain = user.can_chat_today()
+    return success({
+        "is_vip": user.is_vip,
+        "vip_level": user.vip_level,
+        "vip_expire": user.vip_expire.isoformat() if user.vip_expire else None,
+        "daily_used": user.daily_chat_count,
+        "daily_limit": user.FREE_DAILY_LIMIT,
+        "daily_remaining": remain,
+        "can_chat": can,
+    })
+
+
 @auth_bp.route('/auth/update-profile', methods=['PUT'])
 def update_profile():
     """修改昵称/密码"""

@@ -41,6 +41,13 @@ def chat():
     if not data or 'message' not in data:
         return error("message 参数不能为空", 400)
 
+    # VIP限流
+    uid = session.get('user_id','')
+    if uid:
+        from app.models.user import User as _U
+        u = _U.find_by_id(uid)
+        if u and not u.can_chat_today()[0]: return error(f'今日免费额度已用完', 429)
+        if u: u.record_chat()
     try:
         # 调用聊天服务层处理对话逻辑
         result = ChatService.chat(
@@ -109,6 +116,15 @@ def chat_stream():
         file_ctx = f"[用户上传了文件: {attach_filename}]\n\n文件内容:\n```\n{attachment['content']}\n```\n\n基于以上文件内容，回答用户问题:\n"
         user_input = file_ctx + original_message
 
+    # VIP限流
+    uid2 = session.get('user_id','')
+    if uid2:
+        from app.models.user import User as _U2
+        u2 = _U2.find_by_id(uid2)
+        if u2 and not u2.can_chat_today()[0]:
+            def gen_err(): yield 'data: [ERROR] 今日免费额度已用完，请升级VIP\n\n'
+            return Response(gen_err(), mimetype='text/event-stream')
+        if u2: u2.record_chat()
     def generate():
         """
         生成器函数 —— 负责逐步产生 SSE 事件数据。

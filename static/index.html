@@ -442,9 +442,18 @@
             <div class="ver">v2.4</div>
         </div>
     </div>
-    <div id="userInfo" style="padding:6px 20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <span id="userNick">加载中...</span>
-      <button class="header-btn" onclick="logout()" style="font-size:10px;padding:2px 8px">退出</button>
+    <div id="userInfo" style="padding:6px 20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span id="userNick">加载中...</span>
+        <div>
+          <span id="vipBadge" style="display:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px">VIP</span>
+          <button class="header-btn" onclick="logout()" style="font-size:10px;padding:2px 8px">退出</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)">
+        <span id="chatQuota">加载中...</span>
+        <a href="#" onclick="showUpgradeModal()" style="color:var(--accent);text-decoration:none;font-size:10px" id="upgradeLink">升级VIP</a>
+      </div>
     </div>
     <div class="conv-list" id="convList">
         <!-- dynamic -->
@@ -1257,7 +1266,7 @@
         }catch(e){}
       }
       await loadConversations();
-      loadTokenStats();  // 刷新统计
+      loadTokenStats();loadVipStats();  // 刷新统计
 
       // Save for manual replay
       if(fullText) lastAssistantText = fullText;
@@ -2156,13 +2165,26 @@
     }
 
     // ==================== INIT ====================
-    async function loadUser(){
-      try{const d=await api('GET','/auth/me');if(d.code===200&&d.data)document.getElementById('userNick').textContent='👤 '+d.data.nickname}catch(e){}
+    async function loadVipStats(){
+  try{const d=await api('GET','/vip/stats');if(d.code===200)document.getElementById('chatQuota').textContent='💬 '+(d.data.is_vip?'无限制':d.data.daily_remaining+'/'+d.data.daily_limit+' 次今日')}catch(e){}
+}
+async function loadUser(){
+      try{const d=await api('GET','/auth/me');if(d.code===200&&d.data)document.getElementById('userNick').textContent='👤 '+d.data.nickname;
+      const vb=document.getElementById('vipBadge');
+      if(d.data.is_vip){vb.style.display='inline';vb.textContent='VIP '+new Date(d.data.vip_expire).toLocaleDateString('zh-CN')}else{vb.style.display='none'}
+      const q=document.getElementById('chatQuota');
+      q.textContent='💬 '+(d.data.is_vip?'无限制':d.data.daily_remaining+'/'+d.data.daily_limit+' 次今日');
+      document.getElementById('upgradeLink').style.display=d.data.is_vip?'none':'inline'}catch(e){}
     }
-    async function logout(){await api('POST','/auth/logout');location.href='/login'}
+    function showUpgradeModal(){alert('请添加微信 xxx 联系管理员升级VIP
+
+免费版: 30条/天
+VIP月卡: ¥19/月 无限制
+VIP年卡: ¥99/年 无限制')}
+async function logout(){await api('POST','/auth/logout');location.href='/login'}
 
     async function init(){
-      await loadUser();
+      await loadUser();await loadVipStats();
       loadTheme();
       loadParams();
 

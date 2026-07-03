@@ -16,8 +16,12 @@ class User(db.Model):
     qq_openid = db.Column(db.String(100), unique=True, nullable=True)      # QQ OpenID
     nickname = db.Column(db.String(50), default="用户")                     # 昵称
     avatar = db.Column(db.String(200), default="")                         # 头像 URL
-    api_key = db.Column(db.String(64), unique=True, nullable=True)         # API Key (兼容旧版)
+    api_key = db.Column(db.String(64), unique=True, nullable=True)
     quota = db.Column(db.Integer, default=1000)
+    vip_level = db.Column(db.Integer, default=0)           # 0=免费 1=VIP月卡 2=VIP年卡
+    vip_expire = db.Column(db.DateTime, nullable=True)      # VIP到期时间
+    daily_chat_count = db.Column(db.Integer, default=0)     # 今日对话次数
+    daily_chat_date = db.Column(db.Date, nullable=True)     # 计数日期
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ---- 密码相关 ----
@@ -84,6 +88,49 @@ class User(db.Model):
     def find_by_api_key(cls, api_key):
         return cls.query.filter_by(api_key=api_key).first()
 
+    # ---- 会员系统 ----
+    FREE_DAILY_LIMIT = 30  # 免费用户每日限制
+
+    @property
+    def is_vip(self):
+        """是否VIP（未过期）"""
+        return self.vip_level > 0 and (not self.vip_expire or self.vip_expire > datetime.utcnow())
+
+    def can_chat_today(self):
+        """今天是否还能对话"""
+        if self.is_vip: return True, 9999
+        today = datetime.utcnow().date()
+        if self.daily_chat_date != today:
+            self.daily_chat_count = 0
+            self.daily_chat_date = today
+            db.session.commit()
+        remaining = self.FREE_DAILY_LIMIT - self.daily_chat_count
+        return remaining > 0, max(0, remaining)
+
+    def record_chat(self):
+        """记录一次对话"""
+        today = datetime.utcnow().date()
+        if self.daily_chat_date != today:
+            self.daily_chat_count = 1
+            self.daily_chat_date = today
+        else:
+            self.daily_chat_count += 1
+        db.session.commit()
+
+    @classmethod
+    def upgrade_vip(cls, user_id, days=30):
+        """升级VIP"""
+        user = cls.query.get(user_id)
+        if not user: return None
+        from datetime import timedelta
+        user.vip_level = 1
+        expire = datetime.utcnow() + timedelta(days=days)
+        if user.vip_expire and user.vip_expire > datetime.utcnow():
+            expire = user.vip_expire + timedelta(days=days)
+        user.vip_expire = expire
+        db.session.commit()
+        return user
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -93,6 +140,10 @@ class User(db.Model):
             "avatar": self.avatar,
             "quota": self.quota,
             "has_password": bool(self.password_hash),
+            "vip_level": self.vip_level,
+            "vip_expire": self.vip_expire.isoformat() if self.vip_expire else None,
+            "is_vip": self.is_vip,
+            "daily_remaining": max(0, self.FREE_DAILY_LIMIT - (self.daily_chat_count if self.daily_chat_date == datetime.utcnow().date() else 0)),
             "has_wechat": bool(self.wechat_openid),
             "has_qq": bool(self.qq_openid),
             "created_at": self.created_at.isoformat() if self.created_at else None,
