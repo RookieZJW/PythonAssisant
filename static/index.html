@@ -2176,11 +2176,7 @@ async function loadUser(){
       q.textContent='💬 '+(d.data.is_vip?'无限制':d.data.daily_remaining+'/'+d.data.daily_limit+' 次今日');
       document.getElementById('upgradeLink').style.display=d.data.is_vip?'none':'inline'}catch(e){}
     }
-    function showUpgradeModal(){alert('请添加微信 xxx 联系管理员升级VIP
-
-免费版: 30条/天
-VIP月卡: ¥19/月 无限制
-VIP年卡: ¥99/年 无限制')}
+    function showUpgradeModal(){alert('请添加微信 xxx 联系管理员升级VIP\\n\\n免费版: 30条/天\\nVIP月卡: ¥19/月 无限制\\nVIP年卡: ¥99/年 无限制')}
 async function logout(){await api('POST','/auth/logout');location.href='/login'}
 
     async function init(){
