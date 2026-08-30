@@ -46,6 +46,12 @@ class BaseConfig:
     # ===== 腾讯云 TTS 配置 (语音合成, 可选) =====
     TENCENT_TTS_SECRET_ID = os.getenv("TENCENT_TTS_SECRET_ID", "")
     TENCENT_TTS_SECRET_KEY = os.getenv("TENCENT_TTS_SECRET_KEY", "")
+    # ===== ??????? (????????) =====
+    ALIYUN_SMS_ACCESS_KEY_ID = os.getenv("ALIYUN_SMS_ACCESS_KEY_ID", "")
+    ALIYUN_SMS_ACCESS_KEY_SECRET = os.getenv("ALIYUN_SMS_ACCESS_KEY_SECRET", "")
+    ALIYUN_SMS_SIGN_NAME = os.getenv("ALIYUN_SMS_SIGN_NAME", "")
+    ALIYUN_SMS_TEMPLATE_CODE = os.getenv("ALIYUN_SMS_TEMPLATE_CODE", "")
+
 
     # ===== Redis 配置 (限流用, 可选) =====
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

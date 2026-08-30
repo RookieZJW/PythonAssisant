@@ -1,5 +1,8 @@
 """登录/注册 API — 密码 + 手机验证码 + 微信/QQ 扫码"""
 import random
+import json
+from datetime import datetime
+from app.config.settings import settings
 from flask import Blueprint, request, session
 from app.models.user import User
 from app.extensions import db
@@ -7,9 +10,38 @@ from app.utils.response import success, error
 
 auth_bp = Blueprint('auth', __name__)
 
+def send_aliyun_sms(phone, code):
+    """??????? API ?????"""
+    from alibabacloud_dysmsapi20170525.client import Client
+    from alibabacloud_dysmsapi20170525 import models as dysms_models
+    from alibabacloud_tea_openapi import models as open_api_models
+
+    config = open_api_models.Config(
+        access_key_id=settings.ALIYUN_SMS_ACCESS_KEY_ID,
+        access_key_secret=settings.ALIYUN_SMS_ACCESS_KEY_SECRET
+    )
+    config.endpoint = "dysmsapi.aliyuncs.com"
+    client = Client(config)
+
+    req = dysms_models.SendSmsRequest(
+        phone_numbers=phone,
+        sign_name=settings.ALIYUN_SMS_SIGN_NAME,
+        template_code=settings.ALIYUN_SMS_TEMPLATE_CODE,
+        template_param=json.dumps({"code": code}, ensure_ascii=False)
+    )
+    resp = client.send_sms(req)
+    body = resp.body
+    if body.code != "OK":
+        raise RuntimeError(f"????? {body.code}: {body.message}")
+
 # 测试模式：验证码固定为 123456（生产环境需接入阿里云/腾讯云短信服务）
-SMS_TEST_MODE = True
-sms_codes = {}  # {phone: code}
+SMS_CONFIGURED = bool(
+    settings.ALIYUN_SMS_ACCESS_KEY_ID
+    and settings.ALIYUN_SMS_ACCESS_KEY_SECRET
+    and settings.ALIYUN_SMS_SIGN_NAME
+    and settings.ALIYUN_SMS_TEMPLATE_CODE
+)
+sms_codes = {}  # {phone: (code, sent_at)}
 
 
 @auth_bp.route('/auth/register', methods=['POST'])
@@ -48,43 +80,60 @@ def login():
 
 @auth_bp.route('/auth/sms/send', methods=['POST'])
 def sms_send():
-    """发送短信验证码"""
+    """??????????????"""
     data = request.get_json() or {}
     phone = data.get('phone', '').strip()
-    if not phone or len(phone) < 11: return error("请输入有效手机号", 400)
+    if not phone or not phone.isdigit() or len(phone) != 11 or not phone.startswith('1'):
+        return error("????????", 400)
 
-    if SMS_TEST_MODE:
-        code = '123456'
+    now = datetime.utcnow()
+    saved = sms_codes.get(phone)
+    if saved and (now - saved[1]).total_seconds() < 60:
+        return error("???????????60????", 429)
+
+    code = str(random.randint(100000, 999999))
+    if SMS_CONFIGURED:
+        try:
+            send_aliyun_sms(phone, code)
+        except Exception as e:
+            return error(f"??????: {str(e)}", 500)
     else:
-        code = str(random.randint(100000, 999999))
-        # TODO: 调用阿里云/腾讯云短信 API 发送 code 到 phone
+        code = '123456'
+        print(f"[SMS][????] ??? {phone} ??? {code}")
 
-    sms_codes[phone] = code
-    print(f"[SMS] 手机号 {phone} 验证码: {code}")  # 生产环境删除此行
-    return success(None, "验证码已发送" + ("(测试: 123456)" if SMS_TEST_MODE else ""))
+    sms_codes[phone] = (code, now)
+    msg = "??????"
+    if not SMS_CONFIGURED:
+        msg += "?????????123456?"
+    return success(None, msg)
 
 
 @auth_bp.route('/auth/sms/login', methods=['POST'])
 def sms_login():
-    """手机号+验证码登录/注册"""
+    """??? + ?????/??"""
     data = request.get_json() or {}
     phone = data.get('phone', '').strip()
     code = data.get('code', '').strip()
-    if not phone or not code: return error("请输入手机号和验证码", 400)
+    if not phone or not code:
+        return error("??????????", 400)
 
-    saved = sms_codes.get(phone, '')
-    if code != saved and not SMS_TEST_MODE:
-        return error("验证码错误", 401)
+    saved = sms_codes.get(phone)
+    if not saved:
+        return error("???????", 400)
+    saved_code, sent_at = saved
+    if (datetime.utcnow() - sent_at).total_seconds() > 300:
+        sms_codes.pop(phone, None)
+        return error("????????????", 401)
+    if code != saved_code:
+        return error("?????", 401)
 
-    # 验证码正确，清除
     sms_codes.pop(phone, None)
 
     user = User.query.filter_by(phone=phone).first()
     if not user:
         user, _ = User.register_phone(phone)
-
     session['user_id'] = user.id
-    return success(user.to_dict(), "登录成功")
+    return success(user.to_dict(), "????")
 
 
 @auth_bp.route('/auth/wechat/qrcode', methods=['GET'])

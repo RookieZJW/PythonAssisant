@@ -442,18 +442,9 @@
             <div class="ver">v2.4</div>
         </div>
     </div>
-    <div id="userInfo" style="padding:6px 20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-        <span id="userNick">加载中...</span>
-        <div>
-          <span id="vipBadge" style="display:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px">VIP</span>
-          <button class="header-btn" onclick="logout()" style="font-size:10px;padding:2px 8px">退出</button>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)">
-        <span id="chatQuota">加载中...</span>
-        <a href="#" onclick="showUpgradeModal()" style="color:var(--accent);text-decoration:none;font-size:10px" id="upgradeLink">升级VIP</a>
-      </div>
+    <div id="userInfo" style="padding:6px 20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span id="userNick">加载中...</span>
+      <button class="header-btn" onclick="logout()" style="font-size:10px;padding:2px 8px">退出</button>
     </div>
     <div class="conv-list" id="convList">
         <!-- dynamic -->
@@ -1266,7 +1257,7 @@
         }catch(e){}
       }
       await loadConversations();
-      loadTokenStats();loadVipStats();  // 刷新统计
+      loadTokenStats();  // 刷新统计
 
       // Save for manual replay
       if(fullText) lastAssistantText = fullText;
@@ -1634,3 +1625,602 @@
       }},
 
       // 2. Steel — Minimalist, cold, architectural
+      steel:{name:'钢铁',colors:{
+        '--bg-deep':'#0c0c0e','--bg-panel':'#16161a','--bg-card':'#1f1f25',
+        '--accent':'#a1a1aa','--accent2':'#71717a','--accent3':'#d4d4d8',
+        '--text':'#e4e4e7','--text-dim':'#71717a','--border':'#27272a',
+        '--user-bg':'linear-gradient(135deg,#71717a,#52525b)',
+        '--ai-bg':'linear-gradient(135deg,#71717a,#52525b)',
+        '--bubble-shadow':'0 4px 20px rgba(113,113,122,.15)',
+        '--bubble-shadow-user':'0 4px 24px rgba(113,113,122,.22)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 3. Ocean — Deep, immersive, calm
+      ocean:{name:'深海',colors:{
+        '--bg-deep':'#040a14','--bg-panel':'#0a1628','--bg-card':'#102040',
+        '--accent':'#38bdf8','--accent2':'#0ea5e9','--accent3':'#7dd3fc',
+        '--text':'#d0e0f8','--text-dim':'#5880a8','--border':'#1a3050',
+        '--user-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)',
+        '--ai-bg':'linear-gradient(135deg,#0ea5e9,#0284c7)',
+        '--bubble-shadow':'0 4px 20px rgba(14,165,233,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(14,165,233,.26)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 4. Emerald — Botanical, fresh, grounded
+      emerald:{name:'翡翠',colors:{
+        '--bg-deep':'#031008','--bg-panel':'#081a10','--bg-card':'#0e2818',
+        '--accent':'#34d399','--accent2':'#10b981','--accent3':'#6ee7b7',
+        '--text':'#c8e8d8','--text-dim':'#508868','--border':'#183020',
+        '--user-bg':'linear-gradient(135deg,#10b981,#059669)',
+        '--ai-bg':'linear-gradient(135deg,#10b981,#059669)',
+        '--bubble-shadow':'0 4px 20px rgba(16,185,129,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(16,185,129,.24)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 5. Rose — Soft, elegant, warm
+      rose:{name:'玫瑰',colors:{
+        '--bg-deep':'#0f0610','--bg-panel':'#1c0c1a','--bg-card':'#2a1228',
+        '--accent':'#f472b6','--accent2':'#e11d8c','--accent3':'#f9a8d4',
+        '--text':'#e8d0e0','--text-dim':'#987080','--border':'#341828',
+        '--user-bg':'linear-gradient(135deg,#e11d8c,#be185d)',
+        '--ai-bg':'linear-gradient(135deg,#e11d8c,#be185d)',
+        '--bubble-shadow':'0 4px 20px rgba(225,29,140,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(225,29,140,.26)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 6. Amber — Warm, rich, confident
+      amber:{name:'琥珀',colors:{
+        '--bg-deep':'#0c0804','--bg-panel':'#1a1006','--bg-card':'#281808',
+        '--accent':'#f59e0b','--accent2':'#ea580c','--accent3':'#fbbf24',
+        '--text':'#e0d0b8','--text-dim':'#988060','--border':'#302008',
+        '--user-bg':'linear-gradient(135deg,#ea580c,#c2410c)',
+        '--ai-bg':'linear-gradient(135deg,#ea580c,#c2410c)',
+        '--bubble-shadow':'0 4px 20px rgba(234,88,12,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(234,88,12,.24)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 7. Violet — Creative, premium, refined
+      violet:{name:'紫罗兰',colors:{
+        '--bg-deep':'#080612','--bg-panel':'#120c22','--bg-card':'#1c1432',
+        '--accent':'#a78bfa','--accent2':'#7c3aed','--accent3':'#c4b5fd',
+        '--text':'#d8d0f0','--text-dim':'#7870a0','--border':'#282040',
+        '--user-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)',
+        '--ai-bg':'linear-gradient(135deg,#7c3aed,#6d28d9)',
+        '--bubble-shadow':'0 4px 20px rgba(124,58,237,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(124,58,237,.26)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 8. Matrix — Terminal, hacker, iconic
+      matrix:{name:'矩阵',colors:{
+        '--bg-deep':'#000600','--bg-panel':'#000c00','--bg-card':'#001a00',
+        '--accent':'#22c55e','--accent2':'#16a34a','--accent3':'#4ade80',
+        '--text':'#b8f0b8','--text-dim':'#3a883a','--border':'#002c00',
+        '--user-bg':'linear-gradient(135deg,#16a34a,#15803d)',
+        '--ai-bg':'linear-gradient(135deg,#16a34a,#15803d)',
+        '--bubble-shadow':'0 4px 20px rgba(22,163,74,.16)',
+        '--bubble-shadow-user':'0 4px 24px rgba(22,163,74,.26)',
+        '--bubble-text':'#fff'
+      }},
+
+      // ============================================================
+      // LIGHT THEMES (4) — Clean, professional, high contrast
+      // NO warm-beige/brass/oxblood palette (Section 4.2 ban)
+      // ============================================================
+
+      // 9. Zinc — Monochrome, modern, editorial
+      zinc:{name:'锌白',colors:{
+        '--bg-deep':'#f4f4f5','--bg-panel':'#fafafa','--bg-card':'#f0f0f0',
+        '--accent':'#52525b','--accent2':'#3f3f46','--accent3':'#a1a1aa',
+        '--text':'#18181b','--text-dim':'#71717a','--border':'#e4e4e7',
+        '--user-bg':'linear-gradient(135deg,#52525b,#3f3f46)',
+        '--ai-bg':'linear-gradient(135deg,#52525b,#3f3f46)',
+        '--bubble-shadow':'0 2px 14px rgba(0,0,0,.06)',
+        '--bubble-shadow-user':'0 2px 16px rgba(82,82,91,.16)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 10. Mint — Fresh, calm, healthcare-grade
+      mint:{name:'薄荷',colors:{
+        '--bg-deep':'#ecfdf5','--bg-panel':'#f8fdf9','--bg-card':'#f0fdf4',
+        '--accent':'#059669','--accent2':'#047857','--accent3':'#34d399',
+        '--text':'#064e3b','--text-dim':'#518068','--border':'#d1fae5',
+        '--user-bg':'linear-gradient(135deg,#059669,#047857)',
+        '--ai-bg':'linear-gradient(135deg,#059669,#047857)',
+        '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+        '--bubble-shadow-user':'0 2px 16px rgba(5,150,105,.14)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 11. Sky — Bright, open, trustworthy
+      sky:{name:'晴空',colors:{
+        '--bg-deep':'#eff6ff','--bg-panel':'#f8fbff','--bg-card':'#f0f5ff',
+        '--accent':'#2563eb','--accent2':'#1d4ed8','--accent3':'#60a5fa',
+        '--text':'#172554','--text-dim':'#5870a0','--border':'#dbeafe',
+        '--user-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
+        '--ai-bg':'linear-gradient(135deg,#2563eb,#1d4ed8)',
+        '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+        '--bubble-shadow-user':'0 2px 16px rgba(37,99,235,.14)',
+        '--bubble-text':'#fff'
+      }},
+
+      // 12. Slate — Neutral, restrained, universal
+      slate:{name:'板岩',colors:{
+        '--bg-deep':'#f1f5f9','--bg-panel':'#f8fafc','--bg-card':'#eef2f6',
+        '--accent':'#475569','--accent2':'#334155','--accent3':'#94a3b8',
+        '--text':'#0f172a','--text-dim':'#64748b','--border':'#e2e8f0',
+        '--user-bg':'linear-gradient(135deg,#475569,#334155)',
+        '--ai-bg':'linear-gradient(135deg,#475569,#334155)',
+        '--bubble-shadow':'0 2px 14px rgba(0,0,0,.05)',
+        '--bubble-shadow-user':'0 2px 16px rgba(71,85,105,.14)',
+        '--bubble-text':'#fff'
+      }},
+    };
+
+
+
+    let currentTheme = 'indigo';
+    let themeSettings = {};
+
+    function applyTheme(name){
+      const preset = PRESETS[name];
+      if(!preset) return;
+      currentTheme = name;
+      const root = document.documentElement;
+      Object.entries(preset.colors).forEach(([k,v])=>{ root.style.setProperty(k,v); });
+      // Reset custom bg
+      root.style.setProperty('--bg-image','none');
+      document.querySelector('.bg-video')?.remove();
+      document.getElementById('bgUrl').value = '';
+      themeSettings.bgUrl = '';
+      themeSettings.bgType = 'image';
+      themeSettings.bgMode = 'full';
+      saveTheme();
+      renderThemeGrid();
+      updateSliders();
+    }
+
+    function saveTheme(){
+      const root = document.documentElement;
+      themeSettings.theme = currentTheme;
+      themeSettings.bgUrl = document.getElementById('bgUrl').value;
+      themeSettings.bgType = document.getElementById('bgType').value;
+      themeSettings.bgMode = document.getElementById('bgMode').value;
+      themeSettings.bgSize = document.getElementById('bgSize').value;
+      themeSettings.opPanel = document.getElementById('opPanel').value;
+      themeSettings.opHeader = document.getElementById('opHeader').value;
+      themeSettings.opInput = document.getElementById('opInput').value;
+      themeSettings.borderW = document.getElementById('borderW').value;
+      themeSettings.borderColor = root.style.getPropertyValue('--border') || document.getElementById('borderColor').value;
+      themeSettings.shadowAI = document.getElementById('shadowAI').value;
+      themeSettings.shadowUser = document.getElementById('shadowUser').value;
+      themeSettings.shadowColor = document.getElementById('shadowColor').value;
+      localStorage.setItem('themeSettings', JSON.stringify(themeSettings));
+    }
+
+    function loadTheme(){
+      const saved = localStorage.getItem('themeSettings');
+      if(saved){
+        try{
+          themeSettings = JSON.parse(saved);
+          if(themeSettings.theme && PRESETS[themeSettings.theme]){
+            applyTheme(themeSettings.theme);
+          }
+          // Restore custom settings
+          if(themeSettings.bgUrl) applyBgFromSaved();
+          if(themeSettings.opPanel) document.getElementById('opPanel').value = themeSettings.opPanel;
+          if(themeSettings.opHeader) document.getElementById('opHeader').value = themeSettings.opHeader;
+          if(themeSettings.opInput) document.getElementById('opInput').value = themeSettings.opInput;
+          if(themeSettings.borderW) document.getElementById('borderW').value = themeSettings.borderW;
+          if(themeSettings.borderColor) document.getElementById('borderColor').value = themeSettings.borderColor;
+          if(themeSettings.shadowAI) document.getElementById('shadowAI').value = themeSettings.shadowAI;
+          if(themeSettings.shadowUser) document.getElementById('shadowUser').value = themeSettings.shadowUser;
+          if(themeSettings.shadowColor) document.getElementById('shadowColor').value = themeSettings.shadowColor;
+          if(themeSettings.bgType) document.getElementById('bgType').value = themeSettings.bgType;
+          if(themeSettings.bgMode) document.getElementById('bgMode').value = themeSettings.bgMode;
+          if(themeSettings.bgSize) document.getElementById('bgSize').value = themeSettings.bgSize;
+          applyTransparency();
+          applyBorder();
+          applyShadow();
+          updateBgMode();
+        }catch(e){}
+      }
+      renderThemeGrid();
+      updateSliders();
+    }
+
+    function applyBgFromSaved(){
+      document.getElementById('bgUrl').value = themeSettings.bgUrl||'';
+      applyBg();
+    }
+
+    function applyBg(){
+      let url = document.getElementById('bgUrl').value.trim();
+      const type = document.getElementById('bgType').value;
+      const mode = document.getElementById('bgMode').value;
+      const root = document.documentElement;
+      console.log('[BG] applyBg called - url:', url, 'type:', type, 'mode:', mode);
+      themeSettings.bgUrl = url;
+      themeSettings.bgType = type;
+      themeSettings.bgMode = mode;
+
+      // 本地路径 → 代理 URL
+      if(url && /^[A-Za-z]:[\\/]/.test(url)){
+        url = '/api/v1/local-media?path=' + encodeURIComponent(url);
+      }
+
+      // Remove old video
+      document.querySelector('.bg-video')?.remove();
+
+      if(!url){ root.style.setProperty('--bg-image','none'); saveTheme(); return; }
+
+      if(type==='video'){
+        const video = document.createElement('video');
+        video.className = 'bg-video';
+        video.src = url; video.autoplay = true; video.loop = true; video.muted = true;
+        video.playsInline = true;
+        video.style.display = (mode==='full'||mode==='chat')?'block':'none';
+        if(mode==='chat'){
+          const main = document.querySelector('.main');
+          main.insertBefore(video, main.firstChild);
+        } else {
+          document.body.appendChild(video);
+        }
+        video.load();
+        video.play().then(()=>console.log('[BG] video playing')).catch(e=>console.log('[BG] video play error:',e));
+        console.log('[BG] video appended, src:', video.src, 'display:', video.style.display);
+        root.style.setProperty('--bg-image','none');
+      } else {
+        root.style.setProperty('--bg-image','url('+url+')');
+      }
+      updateBgMode();
+      saveTheme();
+      // 非空 URL 自动存入历史
+      const rawUrl = document.getElementById('bgUrl').value.trim();
+      if(rawUrl){
+        api('POST','/backgrounds',{
+          url: rawUrl,
+          type: type,
+          mode: mode,
+          size: document.getElementById('bgSize').value,
+        }).then(()=>loadBgHistory());
+      }
+    }
+
+    function updateBgMode(){
+      const mode = document.getElementById('bgMode').value;
+      const root = document.documentElement;
+      root.style.setProperty('--bg-mode',mode);
+      const video = document.querySelector('.bg-video');
+      if(video){
+        video.style.display = (mode==='full'||mode==='chat')?'block':'none';
+      }
+      const main = document.querySelector('.main');
+      if(mode==='chat' && root.style.getPropertyValue('--bg-image')!=='none'){
+        if(!document.querySelector('.chat-bg-layer')){
+          const layer = document.createElement('div');
+          layer.className = 'chat-bg-layer';
+          main.insertBefore(layer, main.firstChild);
+        }
+        document.querySelector('.chat-bg-layer').style.display = 'block';
+      } else {
+        const layer = document.querySelector('.chat-bg-layer');
+        if(layer) layer.style.display = 'none';
+      }
+      saveTheme();
+    }
+
+    function applyBgSize(){
+      const size = document.getElementById('bgSize').value;
+      document.documentElement.style.setProperty('--bg-size',size);
+      saveTheme();
+    }
+
+    function clearBg(){
+      document.getElementById('bgUrl').value = '';
+      document.documentElement.style.setProperty('--bg-image','none');
+      document.querySelector('.bg-video')?.remove();
+      const layer = document.querySelector('.chat-bg-layer');
+      if(layer) layer.style.display = 'none';
+      themeSettings.bgUrl = '';
+      saveTheme();
+    }
+
+    async function saveBgToHistory(){
+      const url = document.getElementById('bgUrl').value.trim();
+      if(!url){ alert('请先输入背景URL并应用'); return; }
+      await api('POST','/backgrounds',{
+        url: url,
+        type: document.getElementById('bgType').value,
+        mode: document.getElementById('bgMode').value,
+        size: document.getElementById('bgSize').value,
+      });
+      loadBgHistory();
+    }
+
+    async function loadBgHistory(){
+      try{
+        const data = await api('GET','/backgrounds');
+        if(data.code!==200) return;
+        const el = document.getElementById('bgHistoryList');
+        if(!data.data||!data.data.length){ el.innerHTML=''; return; }
+        let html = '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">📚 历史背景</div>';
+        data.data.forEach(b=>{
+          const icon = b.bg_type==='video'?'🎬':'🖼';
+          const u = b.url.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px" onmouseover="this.style.background=\'var(--bg-card)\'" onmouseout="this.style.background=\'transparent\'">';
+          html += '<span style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="applyBgFromHistory(\''+u+'\',\''+b.bg_type+'\',\''+b.mode+'\',\''+b.size+'\')">'+icon+' '+escHtml(decodeURIComponent(b.url.split('?path=')[1]||b.url).slice(-40))+'</span>';
+          html += '<span style="cursor:pointer;color:#ff4455;font-size:14px" onclick="deleteBgHistory(\''+b.id+'\')">✕</span>';
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }catch(e){}
+    }
+
+    function applyBgFromHistory(url, type, mode, size){
+      document.getElementById('bgUrl').value = url;
+      document.getElementById('bgType').value = type;
+      document.getElementById('bgMode').value = mode;
+      document.getElementById('bgSize').value = size;
+      applyBg();
+    }
+
+    async function deleteBgHistory(id){
+      await api('DELETE','/backgrounds/'+id);
+      loadBgHistory();
+    }
+
+    function applyTransparency(){
+      const opP = document.getElementById('opPanel').value;
+      const opH = document.getElementById('opHeader').value;
+      const opI = document.getElementById('opInput').value;
+      document.documentElement.style.setProperty('--panel-opacity',opP/100);
+      document.documentElement.style.setProperty('--header-opacity',opH/100);
+      document.documentElement.style.setProperty('--input-opacity',opI/100);
+      document.getElementById('valPanel').textContent = opP+'%';
+      document.getElementById('valHeader').textContent = opH+'%';
+      document.getElementById('valInput').textContent = opI+'%';
+      saveTheme();
+    }
+
+    function applyBorder(){
+      const w = document.getElementById('borderW').value;
+      const c = document.getElementById('borderColor').value;
+      document.documentElement.style.setProperty('--border-width',w+'px');
+      document.documentElement.style.setProperty('--border',c);
+      document.getElementById('valBorderW').textContent = w+'px';
+      saveTheme();
+    }
+
+    function applyColors(){
+      const r=document.documentElement;
+      const obub=document.getElementById('opBubble').value/100;
+      const obtn=document.getElementById('opBtn').value/100;
+      const os=document.getElementById('opSelect').value/100;
+      const oi2=document.getElementById('opInput2').value/100;
+      r.style.setProperty('--bubble-opacity',obub);
+      r.style.setProperty('--btn-opacity',obtn);
+      r.style.setProperty('--select-opacity',os);
+      r.style.setProperty('--input-opacity2',oi2);
+      // 生成 select 的 rgba 背景色（只改背景，不改文字）
+      const bg=getComputedStyle(r).getPropertyValue('--bg-card').trim();
+      const hex=bg.match(/#[0-9a-fA-F]{6}/);
+      if(hex){ const h=hex[0]; const rr=parseInt(h.slice(1,3),16),gg=parseInt(h.slice(3,5),16),bb=parseInt(h.slice(5,7),16); r.style.setProperty('--select-bg','rgba('+rr+','+gg+','+bb+','+os+')'); }
+      document.getElementById('txtBubble').textContent=Math.round(obub*100)+'%';
+      document.getElementById('txtBtn').textContent=Math.round(obtn*100)+'%';
+      document.getElementById('txtSelect').textContent=Math.round(os*100)+'%';
+      document.getElementById('txtInput2').textContent=Math.round(oi2*100)+'%';
+      saveTheme();
+    }
+
+    function applyShadow(){
+      const a = document.getElementById('shadowAI').value;
+      const u = document.getElementById('shadowUser').value;
+      const c = document.getElementById('shadowColor').value;
+      const r = parseInt(c.slice(1,3),16);
+      const g = parseInt(c.slice(3,5),16);
+      const b = parseInt(c.slice(5,7),16);
+      document.documentElement.style.setProperty('--bubble-shadow','0 4px '+a+'px rgba('+r+','+g+','+b+',.25)');
+      document.documentElement.style.setProperty('--bubble-shadow-user','0 4px '+u+'px rgba('+r+','+g+','+b+',.35)');
+      document.getElementById('valShadowAI').textContent = a;
+      document.getElementById('valShadowUser').textContent = u;
+      saveTheme();
+    }
+
+    function updateSliders(){
+      document.getElementById('valPanel').textContent = document.getElementById('opPanel').value+'%';
+      document.getElementById('valHeader').textContent = document.getElementById('opHeader').value+'%';
+      document.getElementById('valInput').textContent = document.getElementById('opInput').value+'%';
+      document.getElementById('valBorderW').textContent = document.getElementById('borderW').value+'px';
+    }
+
+    function resetTheme(){
+      applyTheme('indigo');
+      clearBg();
+      document.documentElement.style.setProperty('--panel-opacity','0');
+      document.documentElement.style.setProperty('--header-opacity','0');
+      document.documentElement.style.setProperty('--input-opacity','0');
+      document.documentElement.style.setProperty('--border-width','1px');
+      document.getElementById('opPanel').value = 0;
+      document.getElementById('opHeader').value = 0;
+      document.getElementById('opInput').value = 0;
+      document.getElementById('borderW').value = 1;
+      document.getElementById('borderColor').value = '#202035';
+      document.getElementById('shadowAI').value = 10;
+      document.getElementById('shadowUser').value = 12;
+      document.getElementById('shadowColor').value = '#000000';
+      updateSliders();
+      applyBorder();
+      applyShadow();
+    }
+
+    function renderThemeGrid(){
+      const grid = document.getElementById('themeGrid');
+      grid.innerHTML = '';
+      Object.entries(PRESETS).forEach(([key,preset])=>{
+        const c = preset.colors;
+        const div = document.createElement('div');
+        div.className = 'theme-card' + (key===currentTheme?' active':'');
+        div.innerHTML = `<div class="tc-preview">
+          <span class="tc-dot" style="background:${c['--accent']}"></span>
+          <span class="tc-dot" style="background:${c['--accent2']}"></span>
+          <span class="tc-dot" style="background:${c['--accent3']}"></span>
+        </div>${preset.name}`;
+        div.onclick = ()=>applyTheme(key);
+        grid.appendChild(div);
+      });
+    }
+
+    function openThemeModal(){
+      document.getElementById('themeModal').style.display = 'flex';
+      renderThemeGrid();
+      updateSliders();
+      loadBgHistory();
+    }
+
+    function closeThemeModal(){
+      document.getElementById('themeModal').style.display = 'none';
+    }
+    document.getElementById('themeModal').addEventListener('click', function(e){
+      if(e.target===this) closeThemeModal();
+    });
+
+    // ==================== MODEL PARAMS ====================
+    let modelParams = {temperature:0.7, max_tokens:2048, top_p:1.0};
+
+    function loadParams(){
+      const saved = localStorage.getItem('modelParams');
+      if(saved){
+        try{ modelParams = JSON.parse(saved); }catch(e){}
+      }
+      document.getElementById('paramTemp').value = Math.round(modelParams.temperature * 100);
+      document.getElementById('paramTokens').value = modelParams.max_tokens;
+      document.getElementById('paramTopP').value = Math.round(modelParams.top_p * 100);
+      updateParamDisplay();
+    }
+
+    function updateParamDisplay(){
+      const t = document.getElementById('paramTemp').value / 100;
+      const m = document.getElementById('paramTokens').value;
+      const p = document.getElementById('paramTopP').value / 100;
+      document.getElementById('valTemp').textContent = t.toFixed(2);
+      document.getElementById('valTokens').textContent = m;
+      document.getElementById('valTopP').textContent = p.toFixed(2);
+      // 实时更新 params
+      modelParams.temperature = t;
+      modelParams.max_tokens = parseInt(m);
+      modelParams.top_p = p;
+    }
+
+    function saveParams(){
+      localStorage.setItem('modelParams', JSON.stringify(modelParams));
+    }
+
+    function openParamsModal(){
+      document.getElementById('paramsModal').style.display = 'flex';
+      document.getElementById('paramTemp').value = Math.round(modelParams.temperature * 100);
+      document.getElementById('paramTokens').value = modelParams.max_tokens;
+      document.getElementById('paramTopP').value = Math.round(modelParams.top_p * 100);
+      updateParamDisplay();
+    }
+    function closeParamsModal(){
+      document.getElementById('paramsModal').style.display = 'none';
+      saveParams();
+    }
+    function resetParams(){
+      modelParams = {temperature:0.7, max_tokens:2048, top_p:1.0};
+      document.getElementById('paramTemp').value = 70;
+      document.getElementById('paramTokens').value = 2048;
+      document.getElementById('paramTopP').value = 100;
+      updateParamDisplay();
+      saveParams();
+    }
+    document.getElementById('paramsModal').addEventListener('click', function(e){
+      if(e.target===this) closeParamsModal();
+    });
+
+    // ==================== TOKEN STATS ====================
+    async function loadTokenStats(){
+      try{
+        const data = await api('GET','/stats');
+        if(data.code!==200) return;
+        const s = data.data;
+        const el = document.getElementById('tokenStats');
+        el.innerHTML = '📊 今日 '+s.today_tokens.toLocaleString()+' Tokens ('+s.today_messages+'条)<br>📈 累计 '+s.total_tokens.toLocaleString()+' Tokens ('+s.total_messages+'条)';
+      }catch(e){}
+    }
+
+    // ==================== INIT ====================
+    async function loadUser(){
+      try{const d=await api('GET','/auth/me');if(d.code===200&&d.data)document.getElementById('userNick').textContent='👤 '+d.data.nickname}catch(e){}
+    }
+    async function logout(){await api('POST','/auth/logout');location.href='/login'}
+
+    async function init(){
+      await loadUser();
+      loadTheme();
+      loadParams();
+
+      // 从 localStorage 恢复上次选择
+      currentRoleId = localStorage.getItem('lastRoleId') || '';
+      currentModel = localStorage.getItem('lastModel') || 'deepseek';
+      currentTtsVoice = localStorage.getItem('ttsVoice') || 'v-xiaoyuan';
+
+      await loadRoles();
+      await loadConversations();
+      await loadVoices();
+
+      // 恢复 UI 状态
+      document.getElementById('modelBadge').textContent = currentModel==='deepseek'?'DeepSeek':'通义千问';
+
+      // Restore last conversation
+      const savedConvId = localStorage.getItem('lastConvId');
+      if(savedConvId && conversations.find(c=>c.id===savedConvId)){
+        await switchConversation(savedConvId);
+      }
+
+      // 更新初始欢迎消息的头像为当前角色
+      const firstAvatar = document.querySelector('#messages .msg-row.assistant .msg-avatar');
+      if(firstAvatar) firstAvatar.textContent = getAssistantIcon();
+
+      // 显示/隐藏角色编辑删除按钮
+      updateRoleButtons();
+
+      // 初始透明度显示
+      document.getElementById('txtBubble').textContent='80%';
+      document.getElementById('txtBtn').textContent='0%';
+      document.getElementById('txtSelect').textContent='0%';
+      document.getElementById('txtInput2').textContent='0%';
+
+      // 加载 Token 统计
+      loadTokenStats();
+
+      // Connect WebSocket
+      connectSocket();
+    }
+
+    // Persist model on switch
+    const origToggle = toggleModel;
+    toggleModel = function(){
+      origToggle();
+      localStorage.setItem('lastModel', currentModel);
+    };
+
+    // 等 CDN 脚本加载完再初始化
+    function boot(){
+      if(typeof marked==='undefined'){
+        setTimeout(boot, 200);
+        return;
+      }
+      if(typeof hljs!=='undefined') hljs.configure({languages:[]});
+      init();
+    }
+    boot();
+</script>
+</body>
+</html>
