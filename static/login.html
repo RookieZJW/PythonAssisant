@@ -92,20 +92,37 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#09090b;color:#d4d4d8;d
 </div>
 
 <!-- 注册弹窗 -->
+<!-- 注册弹窗 -->
 <div class="card" id="regCard" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10">
   <h2>注册账号</h2>
   <div class="input-group"><label>用户名</label><input id="regUser" placeholder="至少2位"></div>
   <div class="input-group"><label>密码</label><input id="regPass" type="password" placeholder="至少6位"></div>
+  <div class="input-group"><label>手机号</label><input id="regPhone" placeholder="输入手机号"></div>
+  <div class="input-row">
+    <input id="regCode" placeholder="验证码" style="flex:1">
+    <button class="btn-sms" id="regSmsBtn" onclick="sendRegSMS()">获取验证码</button>
+  </div>
   <div class="error" id="regError"></div>
-  <button class="btn btn-primary" onclick="register()">注 册</button>
+  <button class="btn btn-primary" onclick="register()" style="margin-top:8px">注 册</button>
   <button class="btn btn-outline" onclick="hideReg()">返回登录</button>
 </div>
+
+<!-- 手机号完善注册 -->
+<div class="card" id="phoneRegCard" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:11">
+  <h2>完善账号信息</h2>
+  <p class="sub">手机号已验证，请设置用户名和密码</p>
+  <div class="input-group"><label>用户名</label><input id="phoneRegUser" placeholder="至少2位"></div>
+  <div class="input-group"><label>密码</label><input id="phoneRegPass" type="password" placeholder="至少6位"></div>
+  <div class="error" id="phoneRegError"></div>
+  <button class="btn btn-primary" onclick="completePhoneRegister()" style="margin-top:8px">完成注册</button>
+</div>
+
 <div id="overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5" onclick="hideReg()"></div>
 
 <script>
 function switchTab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));document.querySelector('.tab:nth-child('+({password:1,sms:2,social:3}[t])+')').classList.add('active');document.getElementById('tab-'+t).classList.add('active')}
 function showReg(){document.getElementById('regCard').style.display='block';document.getElementById('overlay').style.display='block'}
-function hideReg(){document.getElementById('regCard').style.display='none';document.getElementById('overlay').style.display='none'}
+function hideReg(){document.getElementById('regCard').style.display='none';document.getElementById('phoneRegCard').style.display='none';document.getElementById('overlay').style.display='none'}
 
 async function api(m,u,b){
   const r=await fetch('/api/v1'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
@@ -120,12 +137,39 @@ async function login(){
   else document.getElementById('loginError').style.display='block',document.getElementById('loginError').textContent=d.message
 }
 
+let regSmsTimer=0;
+async function sendRegSMS(){
+  const p=document.getElementById('regPhone').value.trim();
+  const err=document.getElementById('regError');
+  err.style.display='none';
+  if(!/^1[3-9]\d{9}$/.test(p)){err.style.display='block';err.textContent='请输入正确的手机号';return;}
+  if(regSmsTimer>0)return;
+  const b=document.getElementById('regSmsBtn'); b.disabled=true;
+  try{
+    const d=await api('POST','/auth/sms/send',{phone:p});
+    if(d.code===200){regSmsTimer=60;regCountdown();}
+    else{err.style.display='block';err.textContent=d.message||'发送失败';}
+  }catch(e){err.style.display='block';err.textContent='网络错误，请重试';}
+  b.disabled=false;
+}
+function regCountdown(){
+  const b=document.getElementById('regSmsBtn');
+  if(regSmsTimer>0){b.textContent=regSmsTimer+'s';b.disabled=true;regSmsTimer--;setTimeout(regCountdown,1000)}
+  else{b.textContent='获取验证码';b.disabled=false}
+}
 async function register(){
-  const u=document.getElementById('regUser').value.trim(),p=document.getElementById('regPass').value.trim();
-  if(!u||!p)return;
-  const d=await api('POST','/auth/register',{username:u,password:p});
+  const u=document.getElementById('regUser').value.trim();
+  const pass=document.getElementById('regPass').value.trim();
+  const phone=document.getElementById('regPhone').value.trim();
+  const code=document.getElementById('regCode').value.trim();
+  const err=document.getElementById('regError');
+  err.style.display='none';
+  if(!u||u.length<2){err.style.display='block';err.textContent='用户名至少2位';return;}
+  if(!pass||pass.length<6){err.style.display='block';err.textContent='密码至少6位';return;}
+  if(!phone||!code){err.style.display='block';err.textContent='请输入手机号和验证码';return;}
+  const d=await api('POST','/auth/register',{username:u,password:pass,phone:phone,code:code});
   if(d.code===200) location.href='/';
-  else document.getElementById('regError').style.display='block',document.getElementById('regError').textContent=d.message
+  else{err.style.display='block';err.textContent=d.message}
 }
 
 let smsTimer=0;
@@ -154,10 +198,26 @@ function countdown(){
 
 async function smsLogin(){
   const p=document.getElementById('smsPhone').value.trim(),c=document.getElementById('smsCode').value.trim();
+  const err=document.getElementById('smsError');
+  err.style.display='none';
   if(!p||!c)return;
   const d=await api('POST','/auth/sms/login',{phone:p,code:c});
+  if(d.code===200 && d.data && d.data.need_complete_registration){
+    document.getElementById('phoneRegCard').style.display='block';
+    document.getElementById('overlay').style.display='block';
+  }else if(d.code===200){ location.href='/'; }
+  else{err.style.display='block';err.textContent=d.message}
+}
+async function completePhoneRegister(){
+  const u=document.getElementById('phoneRegUser').value.trim();
+  const pass=document.getElementById('phoneRegPass').value.trim();
+  const err=document.getElementById('phoneRegError');
+  err.style.display='none';
+  if(!u||u.length<2){err.style.display='block';err.textContent='用户名至少2位';return;}
+  if(!pass||pass.length<6){err.style.display='block';err.textContent='密码至少6位';return;}
+  const d=await api('POST','/auth/phone/complete',{username:u,password:pass});
   if(d.code===200) location.href='/';
-  else document.getElementById('smsError').style.display='block',document.getElementById('smsError').textContent=d.message
+  else{err.style.display='block';err.textContent=d.message}
 }
 
 function showQR(type){

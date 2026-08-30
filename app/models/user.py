@@ -51,6 +51,25 @@ class User(db.Model):
         return user, None
 
     @classmethod
+    def register_full(cls, username, password, phone, nickname=None):
+        """???????? + ?? + ????????"""
+        if not username or not password or not phone:
+            return None, "??????????????"
+        if cls.query.filter_by(username=username).first():
+            return None, "??????"
+        if cls.query.filter_by(phone=phone).first():
+            return None, "??????"
+        user = cls(
+            username=username,
+            password_hash=cls.hash_password(password),
+            phone=phone,
+            nickname=nickname or username,
+        )
+        db.session.add(user)
+        db.session.commit()
+        return user, None
+
+    @classmethod
     def register_phone(cls, phone, password=None, nickname=None):
         """手机号注册（可选密码）"""
         if cls.query.filter_by(phone=phone).first():

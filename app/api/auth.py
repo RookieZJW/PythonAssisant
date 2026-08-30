@@ -41,22 +41,53 @@ SMS_CONFIGURED = bool(
     and settings.ALIYUN_SMS_SIGN_NAME
     and settings.ALIYUN_SMS_TEMPLATE_CODE
 )
-sms_codes = {}  # {phone: (code, sent_at)}
+sms_codes = {}
+
+
+def verify_sms_code(phone, code, consume=True):
+    """??????????????????????"""
+    saved = sms_codes.get(phone)
+    if not saved:
+        return False, "请先获取验证码"
+    saved_code, sent_at = saved
+    if (datetime.utcnow() - sent_at).total_seconds() > 300:
+        sms_codes.pop(phone, None)
+        return False, "验证码已过期，请重新获取"
+    if code != saved_code:
+        return False, "验证码错误"
+    if consume:
+        sms_codes.pop(phone, None)
+    return True, ""
+
+  # {phone: (code, sent_at)}
 
 
 @auth_bp.route('/auth/register', methods=['POST'])
 def register():
-    """用户名+密码注册"""
+    """???????? + ?? + ??? + ????????????"""
     data = request.get_json() or {}
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
+    phone = data.get('phone', '').strip()
+    code = data.get('code', '').strip()
     nickname = data.get('nickname', '').strip() or username
 
-    if not username or len(username) < 2: return error("用户名至少2位", 400)
-    if not password or len(password) < 6: return error("密码至少6位", 400)
+    if not username or len(username) < 2:
+        return error("用户名至少2位", 400)
+    if not password or len(password) < 6:
+        return error("密码至少6位", 400)
+    if not phone or not phone.isdigit() or len(phone) != 11 or not phone.startswith('1'):
+        return error("请输入有效手机号", 400)
+    if not code:
+        return error("请输入手机验证码", 400)
 
-    user, err = User.register_username(username, password, nickname)
-    if err: return error(err, 409)
+    ok, msg = verify_sms_code(phone, code)
+    if not ok:
+        return error(msg, 400)
+
+    user, err = User.register_full(username, password, phone, nickname)
+    if err:
+        return error(err, 409)
 
     session['user_id'] = user.id
     return success(user.to_dict(), "注册成功")
@@ -110,30 +141,54 @@ def sms_send():
 
 @auth_bp.route('/auth/sms/login', methods=['POST'])
 def sms_login():
-    """??? + ?????/??"""
+    """??? + ???????????????????????"""
     data = request.get_json() or {}
     phone = data.get('phone', '').strip()
     code = data.get('code', '').strip()
     if not phone or not code:
-        return error("??????????", 400)
+        return error("请输入手机号和验证码", 400)
 
-    saved = sms_codes.get(phone)
-    if not saved:
-        return error("???????", 400)
-    saved_code, sent_at = saved
-    if (datetime.utcnow() - sent_at).total_seconds() > 300:
-        sms_codes.pop(phone, None)
-        return error("????????????", 401)
-    if code != saved_code:
-        return error("?????", 401)
-
-    sms_codes.pop(phone, None)
+    ok, msg = verify_sms_code(phone, code)
+    if not ok:
+        return error(msg, 401)
 
     user = User.query.filter_by(phone=phone).first()
-    if not user:
-        user, _ = User.register_phone(phone)
+    if user:
+        session['user_id'] = user.id
+        return success(user.to_dict(), "登录成功")
+
+    # ?????????????????????????
+    session['pending_phone'] = phone
+    return success({
+        "need_complete_registration": True,
+        "phone": phone,
+    }, "手机号验证成功，请完善账号信息")
+
+
+@auth_bp.route('/auth/phone/complete', methods=['POST'])
+def phone_complete_registration():
+    """?????????????????????"""
+    pending_phone = session.get('pending_phone', '').strip()
+    if not pending_phone:
+        return error("请先通过手机验证码验证", 400)
+
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    nickname = data.get('nickname', '').strip() or username
+
+    if not username or len(username) < 2:
+        return error("用户名至少2位", 400)
+    if not password or len(password) < 6:
+        return error("密码至少6位", 400)
+
+    user, err = User.register_full(username, password, pending_phone, nickname)
+    if err:
+        return error(err, 409)
+
+    session.pop('pending_phone', None)
     session['user_id'] = user.id
-    return success(user.to_dict(), "????")
+    return success(user.to_dict(), "注册成功")
 
 
 @auth_bp.route('/auth/wechat/qrcode', methods=['GET'])
