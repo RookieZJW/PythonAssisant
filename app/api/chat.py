@@ -49,13 +49,36 @@ def chat():
         if u and not u.can_chat_today()[0]: return error(f'今日免费额度已用完', 429)
         if u: u.record_chat()
     try:
+        # 会话模式：normal=普通问答，kb=知识库问答
+        mode = data.get('mode', 'normal')
+        mode = mode if mode in ('normal', 'kb') else 'normal'
+        kb_id = (data.get('kb_id', '') or '') if mode == 'kb' else ''
+        role_id = data.get('role_id') if mode == 'normal' else None
+        sys_prompt = data.get('system_prompt') if mode == 'normal' else None
+        if mode == 'kb' and not kb_id:
+            return error("请选择知识库", 400)
+
+        # 知识库问答：检索相关片段并注入 system prompt
+        if mode == 'kb':
+            from app.models.knowledge_base import KnowledgeBase
+            from app.services import kb_service
+            kb = KnowledgeBase.get_visible(kb_id, session.get('user_id', ''))
+            if not kb:
+                return error("知识库不存在或无访问权限", 404)
+            context = kb_service.build_context(kb_id, data['message'])
+            if not context:
+                return error("知识库中暂无可检索的内容，请先上传文档", 400)
+            sys_prompt = kb_service.kb_system_prompt(kb.name, context, None)
+
         # 调用聊天服务层处理对话逻辑
         result = ChatService.chat(
             conversation_id=data.get('conversation_id', 'default'),
             user_input=data['message'],
             model_type=data.get('model'),
-            system_prompt=data.get('system_prompt'),
-            role_id=data.get('role_id'),
+            system_prompt=sys_prompt,
+            role_id=role_id,
+            mode=mode,
+            kb_id=kb_id,
         )
         # 将新会话绑定当前用户
         uid = session.get('user_id','')
@@ -103,11 +126,32 @@ def chat_stream():
     original_message = data['message']  # 用户原始输入（存数据库时使用）
     user_input = original_message
     model_type = data.get('model')
-    system_prompt = data.get('system_prompt')
-    role_id = data.get('role_id')
+    mode = data.get('mode', 'normal')
+    mode = mode if mode in ('normal', 'kb') else 'normal'
+    system_prompt = data.get('system_prompt') if mode == 'normal' else None
+    role_id = data.get('role_id') if mode == 'normal' else None
     model_params = data.get('params', {})
     attachment = data.get('attachment', {})
     attach_filename = ''
+    kb_id = (data.get('kb_id', '') or '') if mode == 'kb' else ''
+
+    # 知识库问答：检索相关片段并注入 system prompt
+    kb_context_error = None
+    if mode == 'kb' and not kb_id:
+        kb_context_error = "请选择知识库"
+    elif mode == 'kb':
+        from app.models.knowledge_base import KnowledgeBase
+        from app.services import kb_service
+        uid_kb = session.get('user_id', '')
+        kb = KnowledgeBase.get_visible(kb_id, uid_kb)
+        if not kb:
+            kb_context_error = "知识库不存在或无访问权限"
+        else:
+            context = kb_service.build_context(kb_id, original_message)
+            if not context:
+                kb_context_error = "知识库中暂无可检索的内容，请先上传文档"
+            else:
+                system_prompt = kb_service.kb_system_prompt(kb.name, context, None)
 
     # 有附件时，将文件内容拼接到 LLM 上下文中（但不存入数据库）
     if attachment and attachment.get('content'):
@@ -135,9 +179,14 @@ def chat_stream():
             4. 若为新会话则自动更新标题
         """
         try:
+            if kb_context_error:
+                yield 'data: [ERROR] ' + kb_context_error + '\n\n'
+                return
+
             # 步骤1: 准备对话上下文（包含历史消息加载和记忆注入）
             uid = session.get('user_id',''); conversation, memory, messages = ChatService.prepare_chat_context(
-                conversation_id, user_input, model_type, system_prompt, role_id
+                conversation_id, user_input, model_type, system_prompt, role_id,
+                mode=mode, kb_id=kb_id,
             )
             # 将新创建的会话绑定到当前登录用户
             if uid and (not conversation.user_id or conversation.user_id == 'anonymous'):

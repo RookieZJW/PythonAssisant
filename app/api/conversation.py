@@ -22,6 +22,10 @@ from datetime import datetime
 conversation_bp = Blueprint('conversation', __name__)
 
 
+def _normalize_mode(value):
+    return value if value in ('normal', 'kb') else 'normal'
+
+
 @conversation_bp.route('/conversations', methods=['POST'])
 def create_conversation():
     """
@@ -34,6 +38,8 @@ def create_conversation():
         - model (可选): 使用的模型名称，默认 "deepseek"
         - user_id (可选): 用户标识，默认 "anonymous"
         - role_id (可选): 绑定角色 ID
+        - mode (可选): normal=普通问答，kb=知识库问答
+        - kb_id (可选): 知识库会话绑定的知识库 ID
 
     返回:
         JSON 响应，包含新创建的会话信息
@@ -43,8 +49,13 @@ def create_conversation():
     model = data.get('model', 'deepseek')
     user_id = session.get('user_id', data.get('user_id', 'anonymous'))
     role_id = data.get('role_id', None)
+    mode = _normalize_mode(data.get('mode'))
+    kb_id = (data.get('kb_id') or None) if mode == 'kb' else None
 
-    conversation = Conversation.create(title=title, model=model, user_id=user_id, role_id=role_id)
+    conversation = Conversation.create(
+        title=title, model=model, user_id=user_id,
+        role_id=role_id, mode=mode, kb_id=kb_id,
+    )
     return success(conversation.to_dict(), "会话创建成功")
 
 
@@ -59,15 +70,20 @@ def list_conversations():
         - page (可选): 页码，默认 1
         - page_size (可选): 每页条数，默认 20
         - user_id (可选): 用户标识，默认 "anonymous"
+        - mode (可选): normal=普通问答，kb=知识库问答；不传返回全部
 
     返回:
         JSON 响应，包含分页后的会话列表数据
     """
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
-    from flask import session; uid = session.get('user_id','')
+    uid = session.get('user_id', '')
+    mode = request.args.get('mode')
+    mode = mode if mode in ('normal', 'kb') else None
 
-    result = Conversation.get_list(user_id=uid or 'anonymous', page=page, page_size=page_size)
+    result = Conversation.get_list(
+        user_id=uid or 'anonymous', page=page, page_size=page_size, mode=mode
+    )
     return success(result)
 
 

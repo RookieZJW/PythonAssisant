@@ -34,7 +34,7 @@ class ChatService:
     @staticmethod
     def chat(conversation_id: str, user_input: str,
              model_type: str = None, system_prompt: str = None,
-             role_id: str = None):
+             role_id: str = None, mode: str = "normal", kb_id: str = None):
         """同步对话接口 —— 完整的对话请求-响应流程
 
         参数:
@@ -46,6 +46,8 @@ class ChatService:
                 为 None 时使用全局默认系统提示词。
             role_id (str, optional): 角色/人格ID，用于绑定特定角色设定。
                 仅在首次创建会话时生效。
+            mode (str): normal=普通问答，kb=知识库问答。
+            kb_id (str, optional): 知识库会话绑定的知识库 ID。
 
         返回:
             dict: 包含以下字段的响应字典：
@@ -61,8 +63,10 @@ class ChatService:
             5. 将用户消息和模型回复持久化到数据库
             6. 若为新对话则自动生成标题（取第一条消息前30字）
         """
-        # 1. 获取或创建会话（首次创建时绑定角色）
-        conversation = Conversation.get_or_create(conversation_id, role_id=role_id)
+        # 1. 获取或创建会话（首次创建时绑定角色、模式与知识库）
+        conversation = Conversation.get_or_create(
+            conversation_id, role_id=role_id, mode=mode, kb_id=kb_id
+        )
 
         # 2. 初始化记忆并加载历史
         memory = ConversationMemory(conversation.id, k=10)
@@ -102,7 +106,7 @@ class ChatService:
     @staticmethod
     def prepare_chat_context(conversation_id: str, user_input: str,
                              model_type: str = None, system_prompt: str = None,
-                             role_id: str = None):
+                             role_id: str = None, mode: str = "normal", kb_id: str = None):
         """准备对话上下文（供流式接口使用）
 
         该方法是 chat() 的前半部分拆分，用于流式（SSE）场景：
@@ -115,6 +119,8 @@ class ChatService:
             model_type (str, optional): 模型类型标识
             system_prompt (str, optional): 系统提示词
             role_id (str, optional): 角色/人格ID
+            mode (str): normal=普通问答，kb=知识库问答
+            kb_id (str, optional): 知识库会话绑定的知识库 ID
 
         返回:
             tuple: (conversation, memory, messages)
@@ -123,7 +129,9 @@ class ChatService:
                 - messages (list): 组装完成的消息列表，格式为
                   [{"role": "system"|"user"|"assistant", "content": str}, ...]
         """
-        conversation = Conversation.get_or_create(conversation_id, role_id=role_id)
+        conversation = Conversation.get_or_create(
+            conversation_id, role_id=role_id, mode=mode, kb_id=kb_id
+        )
         memory = ConversationMemory(conversation.id, k=10)
         history_messages = Message.get_history(conversation.id, limit=20)
         memory.load_history(history_messages)

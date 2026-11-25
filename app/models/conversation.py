@@ -26,6 +26,8 @@ class Conversation(db.Model):
         user_id: 关联的用户标识符
         model: 本次会话所使用的 AI 模型名称
         role_id: 关联的自定义角色 ID（可为空）
+        mode: 会话模式，normal=普通问答，kb=知识库问答
+        kb_id: 知识库会话绑定的知识库 ID（普通会话为空）
         created_at: 会话创建时间戳
         updated_at: 会话最后更新时间戳（自动更新）
         messages: 与该会话关联的所有消息列表（按创建时间升序排列）
@@ -43,6 +45,10 @@ class Conversation(db.Model):
     model = db.Column(db.String(32), default="deepseek")
     # 角色 ID：最大长度 36 字符，关联到自定义角色的 ID，可为空
     role_id = db.Column(db.String(36), nullable=True, default=None)
+    # 会话模式：normal=普通问答，kb=知识库问答
+    mode = db.Column(db.String(16), nullable=False, default="normal", index=True)
+    # 知识库会话绑定的知识库 ID；普通会话为空
+    kb_id = db.Column(db.String(36), nullable=True, default=None, index=True)
     # 创建时间：默认值为当前 UTC 时间
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # 更新时间：创建时默认为当前时间，每次更新记录时自动刷新为当前时间
@@ -61,27 +67,27 @@ class Conversation(db.Model):
     )
 
     @classmethod
-    def create(cls, title="新对话", model="deepseek", user_id="anonymous", role_id=None):
+    def create(cls, title="新对话", model="deepseek", user_id="anonymous",
+               role_id=None, mode="normal", kb_id=None):
         """
         创建新的会话记录
-
-        这是一个类方法，用于快捷创建并持久化一个新的会话到数据库中。
 
         参数:
             title (str): 会话标题，默认为"新对话"
             model (str): 使用的 AI 模型名称，默认为 "deepseek"
             user_id (str): 用户标识符，默认为 "anonymous"
-            role_id (str, optional): 关联的角色 ID，默认为 None（不使用自定义角色）
-
-        返回:
-            Conversation: 新创建并已持久化的会话实例
+            role_id (str, optional): 关联的角色 ID
+            mode (str): normal=普通问答，kb=知识库问答
+            kb_id (str, optional): 知识库会话绑定的知识库 ID
         """
-        # 构造 Conversation 实例
+        mode = mode if mode in ("normal", "kb") else "normal"
         conversation = cls(
             title=title,
             model=model,
             user_id=user_id,
-            role_id=role_id,
+            role_id=role_id if mode == "normal" else None,
+            mode=mode,
+            kb_id=kb_id if mode == "kb" else None,
         )
         # 添加到数据库会话并提交事务
         db.session.add(conversation)
@@ -89,43 +95,34 @@ class Conversation(db.Model):
         return conversation
 
     @classmethod
-    def get_or_create(cls, conversation_id, role_id=None):
+    def get_or_create(cls, conversation_id, role_id=None, mode="normal", kb_id=None):
         """
-        获取指定 ID 的会话，若不存在则创建新会话
-
-        这是一个类方法，实现了"获取或创建"模式。如果提供了有效的会话 ID
-        且该会话存在于数据库中，则返回已有会话；否则创建一个新的会话。
-
-        参数:
-            conversation_id (str): 要获取的会话 ID
-            role_id (str, optional): 创建新会话时使用的角色 ID
-
-        返回:
-            Conversation: 找到的已有会话或新创建的会话实例
+        获取指定 ID 的会话，若不存在或模式不匹配则创建新会话。
         """
-        # 获取或创建会话
-        # 如果提供了有效的会话 ID 且不是默认值 "default"
+        mode = mode if mode in ("normal", "kb") else "normal"
         if conversation_id and conversation_id != "default":
-            # 按主键查询会话
             conversation = cls.query.filter_by(id=conversation_id).first()
             if conversation:
+                # 防御性处理：不同模式的会话不能复用，避免消息串到另一套历史里
+                if (conversation.mode or "normal") != mode:
+                    return cls.create(role_id=role_id, mode=mode, kb_id=kb_id)
+                if mode == "kb" and kb_id and not conversation.kb_id:
+                    conversation.kb_id = kb_id
+                    db.session.commit()
                 return conversation
 
-        # 未找到有效会话，创建新的会话
-        return cls.create(role_id=role_id)
+        return cls.create(role_id=role_id, mode=mode, kb_id=kb_id)
 
     @classmethod
-    def get_list(cls, user_id="anonymous", page=1, page_size=20):
+    def get_list(cls, user_id="anonymous", page=1, page_size=20, mode=None):
         """
-        获取指定用户的会话列表（支持分页）
-
-        这是一个类方法，用于查询指定用户的所有会话，按更新时间降序排列，
-        并支持分页返回结果。
+        获取指定用户的会话列表（支持分页与模式过滤）
 
         参数:
             user_id (str): 用户标识符，默认为 "anonymous"
             page (int): 页码，从 1 开始，默认为 1
             page_size (int): 每页显示的记录数，默认为 20
+            mode (str, optional): normal/kb；不传则返回全部（兼容旧调用）
 
         返回:
             dict: 包含分页信息的字典，结构如下：
@@ -135,7 +132,10 @@ class Conversation(db.Model):
                 - items (list): 当前页的会话字典列表（每个元素由 to_dict() 生成）
         """
         # 构建查询：按用户 ID 过滤，按更新时间降序排列（最新的在前）
-        query = cls.query.filter_by(user_id=user_id).order_by(cls.updated_at.desc())
+        query = cls.query.filter_by(user_id=user_id)
+        if mode in ("normal", "kb"):
+            query = query.filter(cls.mode == mode)
+        query = query.order_by(cls.updated_at.desc())
 
         # 计算总数
         total = query.count()
@@ -177,6 +177,8 @@ class Conversation(db.Model):
                 - title: 会话标题
                 - model: 使用的 AI 模型
                 - role_id: 关联的角色 ID
+                - mode: 会话模式
+                - kb_id: 知识库会话绑定的知识库 ID
                 - created_at: 创建时间（ISO 格式字符串，可能为 None）
                 - updated_at: 最后更新时间（ISO 格式字符串，可能为 None）
         """
@@ -185,6 +187,8 @@ class Conversation(db.Model):
             "title": self.title,                            # 会话标题
             "model": self.model,                            # 使用的模型
             "role_id": self.role_id,                        # 关联角色 ID
+            "mode": self.mode or "normal",                  # 会话模式
+            "kb_id": self.kb_id,                            # 知识库 ID
             "created_at": self.created_at.isoformat() if self.created_at else None,  # 创建时间
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # 更新时间
         }

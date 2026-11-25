@@ -11,7 +11,7 @@ from app.utils.response import success, error
 auth_bp = Blueprint('auth', __name__)
 
 def send_aliyun_sms(phone, code):
-    """??????? API ?????"""
+    """阿里云短信 API 发送验证码"""
     from alibabacloud_dysmsapi20170525.client import Client
     from alibabacloud_dysmsapi20170525 import models as dysms_models
     from alibabacloud_tea_openapi import models as open_api_models
@@ -32,7 +32,7 @@ def send_aliyun_sms(phone, code):
     resp = client.send_sms(req)
     body = resp.body
     if body.code != "OK":
-        raise RuntimeError(f"????? {body.code}: {body.message}")
+        raise RuntimeError(f"短信发送失败 {body.code}: {body.message}")
 
 # 测试模式：验证码固定为 123456（生产环境需接入阿里云/腾讯云短信服务）
 SMS_CONFIGURED = bool(
@@ -45,7 +45,7 @@ sms_codes = {}
 
 
 def verify_sms_code(phone, code, consume=True):
-    """??????????????????????"""
+    """校验短信验证码，verify_sms_code"""
     saved = sms_codes.get(phone)
     if not saved:
         return False, "请先获取验证码"
@@ -64,7 +64,7 @@ def verify_sms_code(phone, code, consume=True):
 
 @auth_bp.route('/auth/register', methods=['POST'])
 def register():
-    """???????? + ?? + ??? + ????????????"""
+    """注册：手机号验证码 + 用户名 + 密码"""
     data = request.get_json() or {}
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
@@ -111,37 +111,37 @@ def login():
 
 @auth_bp.route('/auth/sms/send', methods=['POST'])
 def sms_send():
-    """??????????????"""
+    """发送短信验证码"""
     data = request.get_json() or {}
     phone = data.get('phone', '').strip()
     if not phone or not phone.isdigit() or len(phone) != 11 or not phone.startswith('1'):
-        return error("????????", 400)
+        return error("请输入有效手机号", 400)
 
     now = datetime.utcnow()
     saved = sms_codes.get(phone)
     if saved and (now - saved[1]).total_seconds() < 60:
-        return error("???????????60????", 429)
+        return error("发送过于频繁，请 60 秒后再试", 429)
 
     code = str(random.randint(100000, 999999))
     if SMS_CONFIGURED:
         try:
             send_aliyun_sms(phone, code)
         except Exception as e:
-            return error(f"??????: {str(e)}", 500)
+            return error(f"短信发送失败: {str(e)}", 500)
     else:
         code = '123456'
-        print(f"[SMS][????] ??? {phone} ??? {code}")
+        print(f"[SMS][测试模式] 手机号 {phone} 验证码 {code}")
 
     sms_codes[phone] = (code, now)
-    msg = "??????"
+    msg = "验证码已发送"
     if not SMS_CONFIGURED:
-        msg += "?????????123456?"
+        msg += "（测试模式验证码为 123456）"
     return success(None, msg)
 
 
 @auth_bp.route('/auth/sms/login', methods=['POST'])
 def sms_login():
-    """??? + ???????????????????????"""
+    """短信验证码登录：已注册直接登录，未注册引导完善信息"""
     data = request.get_json() or {}
     phone = data.get('phone', '').strip()
     code = data.get('code', '').strip()
@@ -157,7 +157,7 @@ def sms_login():
         session['user_id'] = user.id
         return success(user.to_dict(), "登录成功")
 
-    # ?????????????????????????
+    # 未注册：暂存手机号，引导完善账号信息
     session['pending_phone'] = phone
     return success({
         "need_complete_registration": True,
@@ -167,7 +167,7 @@ def sms_login():
 
 @auth_bp.route('/auth/phone/complete', methods=['POST'])
 def phone_complete_registration():
-    """?????????????????????"""
+    """短信验证后完善账号信息（设置用户名和密码）"""
     pending_phone = session.get('pending_phone', '').strip()
     if not pending_phone:
         return error("请先通过手机验证码验证", 400)

@@ -46,7 +46,7 @@ class BaseConfig:
     # ===== 腾讯云 TTS 配置 (语音合成, 可选) =====
     TENCENT_TTS_SECRET_ID = os.getenv("TENCENT_TTS_SECRET_ID", "")
     TENCENT_TTS_SECRET_KEY = os.getenv("TENCENT_TTS_SECRET_KEY", "")
-    # ===== ??????? (????????) =====
+    # ===== 阿里云短信配置 =====
     ALIYUN_SMS_ACCESS_KEY_ID = os.getenv("ALIYUN_SMS_ACCESS_KEY_ID", "")
     ALIYUN_SMS_ACCESS_KEY_SECRET = os.getenv("ALIYUN_SMS_ACCESS_KEY_SECRET", "")
     ALIYUN_SMS_SIGN_NAME = os.getenv("ALIYUN_SMS_SIGN_NAME", "")
@@ -74,7 +74,7 @@ class DevelopmentConfig(BaseConfig):
     # 数据库连接: mysql+pymysql://用户名:密码@地址:端口/数据库名
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://root:Zhang20.@localhost:3306/smart_assistant"
+        "mysql+pymysql://root:change-me@localhost:3306/smart_assistant"
     )
 
 
@@ -83,7 +83,7 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://root:Zhang20.@localhost:3306/smart_assistant"
+        "mysql+pymysql://root:change-me@localhost:3306/smart_assistant"
     )
 
 

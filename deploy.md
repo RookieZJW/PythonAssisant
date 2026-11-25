@@ -9,15 +9,16 @@ Python 多功能智能助手生产环境部署指南，涵盖 Gunicorn + Nginx�
 ```
 Internet → Nginx (:80/:443) → Gunicorn + gevent (:8000) → Flask
                                   ↓
-                            MySQL (:3306) + Redis (:6379)
+        MySQL (:3306) + Redis (:6379) + Milvus (:19530)
 ```
 
 | 组件 | 端口 | 作用 |
 |------|------|------|
 | Nginx | 80/443 | 反向代理、SSL、静态文件 |
-| Gunicorn + gevent | 8000 | WSGI 多进程，SSE 支持 |
+| Gunicorn + gevent | 8000 | WSGI 多进程，SSE 流式响应（对话、批量上传进度） |
 | MySQL 8.0 | 3306 | 数据存储 |
 | Redis 7.0 | 6379 | 限流（可选） |
+| Milvus Standalone | 19530 | 知识库向量检索；不可用时自动降级 BM25 关键词检索 |
 
 ---
 
@@ -39,6 +40,16 @@ Internet → Nginx (:80/:443) → Gunicorn + gevent (:8000) → Flask
 ```bash
 sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx mysql-server redis-server supervisor
 sudo systemctl enable mysql redis-server nginx --now
+
+# Milvus 用 Docker 跑单机版最省事（内嵌 etcd + 本地存储）
+docker run -d --name milvus-standalone \
+  -p 19530:19530 -p 9091:9091 \
+  -e ETCD_USE_EMBED=true -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+  -e ETCD_CONFIG_PATH=/milvus/configs/embedEtcd.yaml \
+  -e COMMON_STORAGETYPE=local \
+  -v /opt/milvus/data:/var/lib/milvus \
+  --security-opt seccomp:unconfined \
+  milvusdb/milvus:v2.6-latest
 ```
 
 ### 2. 创建数据库
@@ -70,10 +81,12 @@ SECRET=$(openssl rand -hex 32)
 cat > .env << EOF
 FLASK_ENV=production
 SECRET_KEY=$SECRET
-DEEPSEEK_API_KEY=sk-your-key
 DEFAULT_MODEL=deepseek
 TEMPERATURE=0.7
 MAX_TOKENS=2048
+DEEPSEEK_API_KEY=sk-your-key
+# 通义千问 Key 同时用于知识库向量化；不可用时自动降级关键词检索
+QWEN_API_KEY=sk-your-qwen-key
 DATABASE_URL=mysql+pymysql://assistant:YourStrongPassword!@localhost:3306/smart_assistant
 REDIS_URL=redis://localhost:6379/0
 RATE_LIMIT=60
@@ -164,31 +177,25 @@ sudo certbot --nginx -d your-domain.com
 
 ## 方案二：Docker Compose
 
+`docker-compose.yml` 已包含完整依赖（应用 + MySQL + Redis + Milvus Standalone），无需单独装 Milvus：
+
 ```bash
 cd PythonAssistant
-# 编辑 .env 填入配置
+# 在 .env 中额外配置（MySQL 容器初始化用）：
+#   MYSQL_ROOT_PASSWORD=你的root密码
+#   MYSQL_PASSWORD=你的assistant密码
+# compose 会自动把 DATABASE_URL 覆盖为指向 mysql 服务
 docker compose up -d --build
 ```
 
-```yaml
-# docker-compose.yml
-services:
-  app:
-    build: .
-    ports: ["8000:8000"]
-    env_file: .env
-    environment: [FLASK_ENV=production]
-    volumes: [./logs:/app/logs]
-    depends_on: [redis]
-    restart: unless-stopped
-  redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
-    volumes: [redis_data:/data]
-    restart: unless-stopped
-volumes:
-  redis_data:
-```
+服务与数据卷：
+
+| 服务 | 端口 | 数据卷 |
+|------|------|--------|
+| app | 8000 | ./logs、./uploads |
+| mysql | 3306 | mysql_data |
+| redis | 6379 | redis_data |
+| milvus | 19530 / 9091 | milvus_data |
 
 外挂 Nginx 反向代理到 `localhost:8000`。
 
@@ -249,6 +256,7 @@ sudo supervisorctl restart smart-assistant
 | 504 | 模型响应超时 | 加大 `proxy_read_timeout` 和 `timeout` |
 | SSE 打字无效 | Nginx 缓冲 | `proxy_buffering off` |
 | 数据库连接失败 | MySQL 密码错误或未运行 | 检查 `.env` 和服务状态 |
+| 知识库提示降级/检索变弱 | Milvus 未启动或 QWEN_API_KEY 不可用 | `curl http://localhost:9091/healthz` 检查 Milvus；修复后无需重建索引，下次上传自动恢复 |
 | 429 | 触发限流 | 调整 `RATE_LIMIT` |
 
 ---

@@ -1,6 +1,6 @@
-# Python 多功能智能助手 v2.6
+# 🤖 Python 多功能智能助手 v2.8
 
-基于 **Flask + LangChain** 的全栈 AI 对话系统。支持**用户登录注册**、**SSE 流式 Markdown**、**双引擎 TTS**、**12 套主题**、**角色绑定**、**文件附件**。
+基于 **Flask + LangChain** 的全栈 AI 对话系统。支持**用户登录注册**、**SSE 流式 Markdown**、**双引擎 TTS**、**角色绑定**、**文件附件**，以及**多用户隔离的知识库问答与分享**（Milvus 向量检索）。
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.x-green)](https://flask.palletsprojects.com/)
@@ -9,7 +9,7 @@
 
 ---
 
-##  目录
+## 📋 目录
 
 1. [功能特性](#1-功能特性)
 2. [快速开始](#2-快速开始)
@@ -27,19 +27,19 @@
 
 | 分类 | 功能 |
 |------|------|
-|  **登录系统** | 用户名密码注册/登录，Session 认证，用户数据隔离 |
-|  **预留登录** | 手机验证码、微信/QQ扫码（UI就绪，需企业资质） |
-|  **双模型** | DeepSeek + 通义千问，策略模式一键切换 |
-|  **流式 SSE** | Token 级实时输出，JSON-SSE 换行保护 |
-|  **Markdown** | 流式实时渲染，代码高亮+一键复制 |
-|  **语音** | 浏览器 STT 输入 + 火山/腾讯 TTS（11音色） |
-|  **角色** | 6内置+自定义，对话-角色绑定，用户隔离 |
-|  **主题** | 12套预设，透明度/阴影/边框可调，背景图/视频+历史 |
-|  **附件** | PDF/Word/TXT上传，AI基于内容回答 |
-|  **参数** | Temperature/MaxTokens/Top-P 滑块面板 |
-|  **统计** | 每条消息Token + 今日/累计用量 |
-|  **导出** | 对话导出Markdown文件 |
-|  **管理** | 会话硬删除+改名，角色全部可编辑 |
+| 🔐 **登录系统** | 用户名密码注册/登录，Session 认证，用户数据隔离 |
+| 📱 **预留登录** | 手机验证码、微信/QQ扫码（UI就绪，需企业资质） |
+| 🤖 **双模型** | DeepSeek + 通义千问，策略模式一键切换 |
+| ⚡ **流式 SSE** | Token 级实时输出，JSON-SSE 换行保护 |
+| 📝 **Markdown** | 流式实时渲染，代码高亮+一键复制 |
+| 🎤 **语音** | 浏览器 STT 输入 + 火山/腾讯 TTS（11音色） |
+| 🎭 **角色** | 6内置+自定义，对话-角色绑定，用户隔离 |
+| 📚 **知识库** | 每人多个知识库，Milvus 向量检索，扫描版 PDF 自动 OCR，可分享给其他用户只读问答 |
+| 📎 **附件** | PDF/Word/TXT上传，AI基于内容回答 |
+| ⚙️ **参数** | Temperature/MaxTokens/Top-P 滑块面板 |
+| 📊 **统计** | 每条消息Token + 今日/累计用量 |
+| 📥 **导出** | 对话导出Markdown文件 |
+| 🗑️ **管理** | 会话硬删除+改名，角色全部可编辑 |
 
 ---
 
@@ -50,6 +50,7 @@
 - Python ≥ 3.11
 - MySQL 8.0（需运行中）
 - （可选）Redis 7.0
+- （知识库向量检索）Milvus 2.x，本机 `http://localhost:19530`；未启动时自动回退关键词检索
 
 ### 2.2 安装
 
@@ -64,7 +65,7 @@ pip install -r requirements.txt
 
 ```env
 DEEPSEEK_API_KEY=sk-你的密钥
-# 可选：通义千问
+# 可选：通义千问（知识库 embedding 也使用此 Key）
 # QWEN_API_KEY=sk-你的密钥
 ```
 
@@ -93,7 +94,7 @@ gunicorn -c gunicorn_config.py run:app
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `DEEPSEEK_API_KEY` | - | DeepSeek API Key（必填） |
-| `QWEN_API_KEY` | - | 通义千问（可选） |
+| `QWEN_API_KEY` | - | 通义千问对话 + `text-embedding-v3` 知识库向量化；未配置时知识库回退关键词检索 |
 | `DEFAULT_MODEL` | `deepseek` | 默认模型 |
 | `TEMPERATURE` | `0.7` | 0=严谨 2=创意 |
 | `MAX_TOKENS` | `2048` | 回复最大长度 |
@@ -113,20 +114,20 @@ gunicorn -c gunicorn_config.py run:app
 
 > 手机验证码、微信/QQ扫码登录 UI 已就绪，因需企业营业执照暂不可用。
 
-每个用户登录后只能看到**自己的**对话、角色和背景历史。
+每个用户登录后只能看到**自己的**对话和角色。
 
 ### 4.2 对话
 
 - 输入框打字 → **Enter** 发送（Shift+Enter 换行）
 - AI 逐字流式回复，带 Markdown 实时排版
 - 输出过程中发送按钮变红色 ⏹，点击停止
-- 顶部 ** 模型** 切换 DeepSeek/通义千问
+- 顶部 **模型** 按钮切换 DeepSeek / 通义千问
 
 ### 4.3 角色
 
 - 顶部下拉框选角色，AI 回复风格随之变化
 - **＋ 角色**：自定义名称/图标/提示词（同名拒绝重复）
-- 选择角色后  编辑 /  删除
+- 选择角色后 ✏️ 编辑 / 🗑️ 删除
 - 对话自动绑定角色，切换历史对话恢复对应角色
 
 ### 4.4 语音
@@ -137,32 +138,37 @@ gunicorn -c gunicorn_config.py run:app
 - 🔊 手动朗读 / ⏹ 停止
 - 麦克风测试：`/static/mic-test.html`
 
-### 4.5 主题
-
-- 顶栏 **🎨 主题** → 12 套预设一键切换
-- 透明度调节：聊天气泡/按钮/下拉框/输入框（背景透明，文字不变）
-- 边框粗细/颜色 + 气泡阴影
-- 自定义背景：输入图片/视频 URL → 类型选图片/视频 → 模式选全屏/仅聊天区 → 点应用
-- 支持本地路径（如 `D:\图片\bg.jpg`）
-- 💾 存入历史，下次点击直接切换
-
-### 4.6 附件
+### 4.5 附件
 
 - 输入框旁 **📎** → 选文件（PDF/Word/TXT/代码）
 - 按钮变绿 📄 → 输入基于附件的问题
 - 再次点击移除附件
 
-### 4.7 模型参数
+### 4.6 模型参数
 
 - **⚙️ 参数** → Temperature/MaxTokens/Top-P 滑块
 - 数值实时生效，localStorage 持久化
 
-### 4.8 对话管理
+### 4.7 对话管理
 
 - **左侧边栏**：查看所有历史对话，点击切换
 - **✏️** 按钮：重命名对话标题
 - **✕** 按钮：删除（含数据库消息）
 - **📥 导出** 按钮：下载当前对话为 Markdown 文件
+
+### 4.8 知识库问答
+
+聊天页顶部模式栏可在 **普通对话** 与 **知识库问答** 之间切换。两个模式的历史列表完全独立，切换时会开启对应模式下的新会话；**角色下拉、编辑/删除角色、添加角色只在普通对话模式显示**。
+
+- 点击 **管理知识库** → 输入名称创建，每个用户可创建多个
+- 在右侧详情中 **上传文档**（TXT/MD/PDF/Word/代码等），支持**一次选择多个文件批量上传**：上传过程中面板实时显示每个文件的「解析中 → 切分中 → 已切分 N 段」与整体进度条，全部入库后统一向量化并显示「向量化 x/y 段」；单个文件解析失败不影响其余文件
+- **扫描版 PDF** 没有文字层时会自动转成图片做本地中文 OCR，识别结果同样入库；首次识别会加载模型，稍慢于普通 PDF
+- 在分享区输入对方用户名即可分享；对方只读，可以基于该知识库提问，不能改文档或分享设置
+- 所有者可移除文档、取消分享、删除知识库；删除会同步清理向量集合
+- 知识库问答会严格依据检索到的资料作答；资料中没有的信息会明确说明
+- 模式和知识库选择保存在浏览器本地，刷新后保持
+
+> 知识库向量检索依赖本机 Milvus。Milvus 或 Embedding 不可用时，系统自动降级到关键词检索，功能仍可使用。
 
 ---
 
@@ -178,20 +184,27 @@ gunicorn -c gunicorn_config.py run:app
 | | POST | `/api/v1/auth/logout` | 退出 |
 | **chat** | POST | `/api/v1/chat` | 对话 |
 | | POST | `/api/v1/chat/stream` | 流式对话(SSE) |
-| **conversation** | GET/POST | `/api/v1/conversations` | 列表/创建 |
+| **conversation** | GET/POST | `/api/v1/conversations` | 列表/创建（列表支持 `mode=normal/kb`） |
 | | GET/PUT/DELETE | `/api/v1/conversations/{id}` | 详情/改名/删除 |
 | | GET | `/api/v1/conversations/{id}/messages` | 消息 |
 | | GET | `/api/v1/conversations/{id}/export` | 导出MD |
 | **role** | GET/POST | `/api/v1/roles` | 列表/创建 |
 | | PUT/DELETE | `/api/v1/roles/{id}` | 更新/删除 |
+| **knowledge_base** | GET/POST | `/api/v1/kb` | 知识库列表/创建 |
+| | GET/DELETE | `/api/v1/kb/{id}` | 详情/删除 |
+| | POST | `/api/v1/kb/{id}/documents` | 上传文档 |
+| | POST | `/api/v1/kb/{id}/documents/bulk` | 批量上传(SSE 进度流) |
+| | DELETE | `/api/v1/kb/{id}/documents/{doc_id}` | 删除文档 |
+| | GET/POST | `/api/v1/kb/{id}/shares` | 分享列表/新增分享 |
+| | DELETE | `/api/v1/kb/{id}/shares/{share_id}` | 取消分享 |
+| | GET | `/api/v1/users/search?q=` | 按用户名搜索用户 |
+| | POST | `/api/v1/kb/{id}/search` | 检索预览 |
 | **voice** | POST | `/api/v1/tts` | 文本转语音 |
 | | GET | `/api/v1/voices` | 音色列表 |
 | **system** | GET | `/api/v1/health` | 健康检查 |
 | | GET | `/api/v1/models` | 模型列表 |
 | | GET | `/api/v1/stats` | Token统计 |
-| | GET | `/api/v1/local-media?path=` | 本地文件代理 |
 | **upload** | POST | `/api/v1/upload` | 文件上传 |
-| **background** | GET/POST/DELETE | `/api/v1/backgrounds/{id}` | 背景历史 |
 
 ### 对话请求示例
 
@@ -203,7 +216,8 @@ POST /api/v1/chat
   "conversation_id": "",
   "system_prompt": "你是一位软件工程师",
   "role_id": "role-uuid",
-  "params": {"temperature": 0.5, "max_tokens": 1024}
+  "params": {"temperature": 0.5, "max_tokens": 1024},
+  "kb_id": "知识库ID，普通对话传空字符串"
 }
 ```
 
@@ -236,10 +250,10 @@ PythonAssistant/
 │   ├── __init__.py            # 工厂+登录保护
 │   ├── extensions.py          # DB+SocketIO
 │   ├── config/                # settings, prompts
-│   ├── models/                # user/role/conversation/message/background
+│   ├── models/                # user/role/conversation/message/knowledge_base
 │   ├── llm/                   # 策略模式 (DeepSeek/Qwen)
-│   ├── services/              # chat/model/tool
-│   ├── api/                   # 8个蓝图 (auth/chat/conversation/role/voice/system/upload/background)
+│   ├── services/              # chat/model/tool/kb_service/kb_vector_service/pdf_ocr_service
+│   ├── api/                   # 蓝图 (auth/chat/conversation/role/voice/system/upload/knowledge_base)
 │   ├── tools/                 # 计算器/数据分析/搜索
 │   ├── middleware/            # 认证/限流/日志
 │   └── utils/                 # 响应/异常/校验
@@ -299,7 +313,9 @@ docker compose up -d
 | 语音识别不工作 | `/static/mic-test.html` 诊断；检查浏览器麦克风权限 |
 | Markdown渲染异常 | **Ctrl+F5** 强制刷新 |
 | 代码修改不生效 | 重启服务 `python run.py` |
-| 背景图不显示 | 类型选视频时模式选"全屏显示" |
+| 知识库检索不准 | 确认 Milvus 已启动、`.env` 已配置 `QWEN_API_KEY`；未配置时仅做关键词检索 |
+| 扫描版 PDF 上传失败 | 确认已安装 `pymupdf`、`rapidocr_onnxruntime`、`opencv-python`；依赖缺失时接口会返回具体提示 |
+| 知识库问答报无权限 | 分享已被取消，或对方不是该知识库所有者/被分享者 |
 | Emoji报错 | 数据库表需 utf8mb4 编码 |
 
 ---

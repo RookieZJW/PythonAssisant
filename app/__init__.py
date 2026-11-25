@@ -106,7 +106,7 @@ def create_app(config_name=None):
         CORS(app)
 
     # 4. 提前导入所有模型，确保 SQLAlchemy 的 create_all 能发现它们
-    from .models import User, Conversation, Message, Role, Background  # noqa
+    from .models import User, Conversation, Message, Role, KnowledgeBase, KBDocument, KBChunk, KBShare  # noqa
 
     # 5. 初始化扩展（包括数据库连接、建表等）
     init_extensions(app)
@@ -124,7 +124,7 @@ def create_app(config_name=None):
     from .api.role import role_bp
     from .api.voice import voice_bp
     from .api.upload import upload_bp
-    from .api.background_api import bg_bp
+    from .api.knowledge_base import kb_bp
     from .api.auth import auth_bp
 
     # 所有蓝图统一挂载在 /api/v1 前缀下
@@ -134,7 +134,7 @@ def create_app(config_name=None):
     app.register_blueprint(role_bp, url_prefix='/api/v1')
     app.register_blueprint(voice_bp, url_prefix='/api/v1')
     app.register_blueprint(upload_bp, url_prefix='/api/v1')
-    app.register_blueprint(bg_bp, url_prefix='/api/v1')
+    app.register_blueprint(kb_bp, url_prefix='/api/v1')
     app.register_blueprint(auth_bp, url_prefix='/api/v1')
 
     # 9. 登录保护 —— 未登录用户重定向到登录页

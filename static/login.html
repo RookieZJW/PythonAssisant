@@ -1,230 +1,388 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>登录 - 智能助手</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#12171D">
+<title>登录 · AI Assistant</title>
+<script>
+(function(){var t=localStorage.getItem('assistantTheme');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);})();
+</script>
 <style>
+:root,[data-theme="dark"]{
+  color-scheme:dark;
+  --ink:#0D1418; --panel:#151E24; --panel-2:#1A252C;
+  --surface:#1C2931; --surface-hi:#24343D;
+  --line:#2B3D46; --line-soft:#213038;
+  --paper:#E9F1F3; --muted:#94AAB2; --faint:#748D96;
+  --celadon:#5FD4BC; --celadon-2:#3E9FB0;
+  --celadon-soft:rgba(95,212,188,.11);
+  --celadon-hover:rgba(95,212,188,.19);
+  --celadon-line:rgba(95,212,188,.36);
+  --accent-gradient:linear-gradient(120deg,#5FD4BC,#3E9FB0);
+  --on-accent:#0C1B1B;
+  --selection:rgba(95,212,188,.26);
+  --app-bg:
+    radial-gradient(1100px 700px at 86% -14%,rgba(72,196,178,.10),transparent 62%),
+    radial-gradient(720px 520px at -10% 108%,rgba(56,140,170,.07),transparent 60%),
+    linear-gradient(rgba(120,170,180,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,170,180,.025) 1px,transparent 1px),
+    #0D1418;
+  --bg-size:auto,auto,32px 32px,32px 32px,auto;
+  --panel-glass:rgba(21,30,36,.82);
+  --composer-glass:rgba(21,30,36,.68);
+  --overlay-bg:rgba(6,11,14,.74);
+  --scrim-bg:rgba(0,0,0,.55);
+  --shadow-modal:0 26px 70px rgba(0,0,0,.52);
+  --shadow-float:0 14px 40px rgba(0,0,0,.42);
+  --glow-accent:0 0 18px rgba(95,212,188,.28);
+  --code-bg:#0B1115; --quote-bg:rgba(255,255,255,.02);
+  --warn:#DCAC68; --danger:#E07A82;
+  --radius:11px; --radius-sm:7px;
+  --ease:cubic-bezier(.2,.7,.25,1); --dur:.18s;
+  --sidebar-w:268px;
+}
+[data-theme="light"]{
+  color-scheme:light;
+  --ink:#F4F8F8; --panel:#FFFFFF; --panel-2:#F8FBFA;
+  --surface:#EEF4F3; --surface-hi:#E2ECE9;
+  --line:#D3E1DE; --line-soft:#E5EEEC;
+  --paper:#152A2C; --muted:#536E71; --faint:#5C787A;
+  --celadon:#0E7C6C; --celadon-2:#167A8C;
+  --celadon-soft:rgba(14,124,108,.09);
+  --celadon-hover:rgba(14,124,108,.15);
+  --celadon-line:rgba(14,124,108,.28);
+  --accent-gradient:linear-gradient(120deg,#0E7C6C,#167A8C);
+  --on-accent:#FFFFFF;
+  --selection:rgba(14,124,108,.18);
+  --app-bg:
+    radial-gradient(1000px 640px at 88% -12%,rgba(22,140,120,.11),transparent 60%),
+    radial-gradient(700px 500px at -8% 105%,rgba(60,130,160,.07),transparent 62%),
+    linear-gradient(rgba(20,90,85,.028) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(20,90,85,.028) 1px,transparent 1px),
+    #F4F8F8;
+  --bg-size:auto,auto,32px 32px,32px 32px,auto;
+  --panel-glass:rgba(255,255,255,.88);
+  --composer-glass:rgba(255,255,255,.78);
+  --overlay-bg:rgba(20,38,40,.34);
+  --scrim-bg:rgba(20,38,40,.28);
+  --shadow-modal:0 26px 70px rgba(18,50,48,.18);
+  --shadow-float:0 14px 40px rgba(18,50,48,.16);
+  --glow-accent:0 4px 16px rgba(14,124,108,.18);
+  --code-bg:#0F1C20; --quote-bg:rgba(14,124,108,.04);
+  --warn:#A96C1B; --danger:#B84C57;
+  --radius:11px; --radius-sm:7px;
+  --ease:cubic-bezier(.2,.7,.25,1); --dur:.18s;
+  --sidebar-w:268px;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Microsoft YaHei',sans-serif;background:#09090b;color:#d4d4d8;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.card{background:#12121a;border:1px solid #27272a;border-radius:16px;padding:40px;width:420px;max-width:90vw}
-.card h2{text-align:center;color:#fff;font-size:24px;margin-bottom:8px}
-.card .sub{text-align:center;color:#71717a;font-size:13px;margin-bottom:24px}
-.input-group{margin-bottom:16px}
-.input-group label{display:block;font-size:12px;color:#71717a;margin-bottom:4px}
-.input-group input{width:100%;padding:12px 14px;background:#0d0d12;border:1px solid #27272a;border-radius:8px;color:#fff;font-size:14px;outline:none}
-.input-group input:focus{border-color:#818cf8}
-.input-row{display:flex;gap:8px}
-.input-row input{flex:1}
-.btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;transition:.2s}
-.btn-primary{background:#6366f1;color:#fff}
-.btn-primary:hover{background:#4f46e5}
-.btn-outline{background:transparent;color:#818cf8;border:1px solid #27272a;margin-top:8px}
-.btn-outline:hover{background:#1a1a23}
-.btn-sms{background:transparent;color:#71717a;border:1px solid #27272a;padding:12px 16px;border-radius:8px;white-space:nowrap;font-size:13px;cursor:pointer}
-.btn-sms:hover{background:#1a1a23}
-.btn-sms:disabled{opacity:.5;cursor:not-allowed}
-.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#71717a;font-size:12px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:#27272a}
-.social-row{display:flex;gap:12px}
-.social-btn{flex:1;padding:12px;border:1px solid #27272a;border-radius:8px;background:transparent;color:#d4d4d8;font-size:14px;cursor:pointer;text-align:center;transition:.2s}
-.social-btn:hover{background:#1a1a23}
-.error{color:#ef4444;font-size:12px;margin-top:4px;display:none}
-.success{color:#22c55e;font-size:12px;margin-top:4px;display:none}
-.link{text-align:center;margin-top:16px;font-size:13px;color:#71717a}
-.link a{color:#818cf8;text-decoration:none}
-.link a:hover{text-decoration:underline}
-.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #27272a}
-.tab{flex:1;text-align:center;padding:10px;color:#71717a;cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
-.tab.active{color:#818cf8;border-bottom-color:#818cf8}
+html,body{min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:14px;line-height:1.7;color:var(--paper);
+  background:var(--app-bg);background-size:var(--bg-size);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:28px 16px;animation:appIn .28s var(--ease) both;
+}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--celadon);outline-offset:2px}
+::selection{background:rgba(95,179,165,.28)}
+
+.card{
+  width:100%;max-width:410px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:30px;box-shadow:var(--shadow-modal);
+  animation:cardIn .26s var(--ease) both;
+}
+.brand{display:flex;justify-content:center;align-items:center;gap:11px;margin-bottom:6px}
+.brand-mark{
+  width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-gradient);border:1px solid transparent;color:var(--on-accent);box-shadow:var(--glow-accent);
+}
+.brand-mark svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card h2{text-align:center;font-size:20px;font-weight:650;letter-spacing:.01em}
+.card .sub{text-align:center;color:var(--faint);font-size:12px;margin:3px 0 24px}
+
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:22px}
+.tab{
+  flex:1;text-align:center;padding:9px 4px 10px;color:var(--faint);font-size:12.5px;cursor:pointer;
+  border-bottom:2px solid transparent;transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease);
+}
+.tab:hover{color:var(--muted)}
+.tab.active{color:var(--celadon);border-bottom-color:var(--celadon)}
 .tab-content{display:none}
-.tab-content.active{display:block}
-.qr-box{text-align:center;padding:20px}
-.qr-box .qr{width:180px;height:180px;background:#0d0d12;border:1px solid #27272a;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:60px}
-.qr-box p{font-size:12px;color:#71717a;margin-top:8px}
-.sms-countdown{color:#71717a;font-size:12px}
+.tab-content.active{display:block;animation:fadeIn .2s var(--ease) both}
+
+.input-group{margin-bottom:15px}
+.input-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.input-group input{
+  width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius-sm);font-size:13.5px;outline:none;
+  transition:border-color var(--dur) var(--ease);
+}
+.input-group input::placeholder{color:var(--faint)}
+.input-group input:focus{border-color:var(--celadon-line)}
+.input-row{display:flex;gap:8px}
+.input-row input{flex:1;min-width:0}
+
+.btn{
+  width:100%;padding:10px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;
+  border:1px solid transparent;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+.btn:active{transform:scale(.99)}
+.btn-primary{background:var(--celadon-soft);border-color:var(--celadon-line);color:var(--celadon);margin-top:8px}
+.btn-primary:hover{filter:brightness(1.09)}
+.btn-outline{background:transparent;border-color:var(--line);color:var(--muted);margin-top:8px}
+.btn-outline:hover{color:var(--paper);border-color:var(--faint)}
+.btn-sms{
+  padding:10px 13px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--muted);white-space:nowrap;font-size:12px;transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease);
+}
+.btn-sms:hover{color:var(--paper);border-color:var(--celadon-line)}
+.btn-sms:disabled{opacity:.45;cursor:not-allowed}
+
+.error{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+.success{color:var(--celadon);font-size:12px;margin-top:8px;display:none}
+.link{text-align:center;margin-top:17px;font-size:12.5px;color:var(--faint)}
+.link a{color:var(--celadon);text-decoration:none;border-bottom:1px solid var(--celadon-line)}
+.link a:hover{color:var(--paper);border-color:var(--muted)}
+
+.notice{
+  background:rgba(217,166,97,.09);border:1px solid rgba(217,166,97,.28);border-radius:var(--radius-sm);
+  padding:9px 12px;margin-bottom:13px;font-size:11.5px;color:var(--warn);text-align:center;line-height:1.6;
+}
+.social-row{display:flex;gap:10px}
+.social-btn{
+  flex:1;padding:15px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:transparent;color:var(--muted);font-size:12.5px;cursor:not-allowed;opacity:.55;
+}
+.social-btn .glyph{font-size:23px;display:block;margin-bottom:5px}
+.social-btn small{display:block;color:var(--warn);font-size:10px;margin-top:3px}
+
+.overlay{display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:10}
+.dialog-card{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:20;display:none;animation:dialogIn .24s var(--ease) both;
+  max-height:calc(100vh - 40px);overflow-y:auto;
+}
+.dialog-card h2{text-align:center;font-size:18px;font-weight:650;margin-bottom:6px}
+
+.theme-fab{
+  position:fixed;top:18px;right:18px;z-index:30;
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel-glass);border:1px solid var(--line);
+  color:var(--celadon);box-shadow:var(--shadow-float);
+  backdrop-filter:blur(10px);
+  transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease),background var(--dur) var(--ease);
+}
+.theme-fab:hover{transform:translateY(-2px);border-color:var(--celadon-line);background:var(--celadon-hover)}
+.theme-fab svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@keyframes appIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes dialogIn{from{opacity:0;transform:translate(-50%,calc(-50% + 10px))}to{opacity:1;transform:translate(-50%,-50%)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media(max-width:480px){.card{padding:24px 20px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-mark" viewBox="0 0 24 24"><path d="M5 12h5l3-7 3 14 3-7h3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+</svg>
+
+<button class="theme-fab" id="themeToggle" onclick="toggleTheme()" title="切换主题" aria-label="切换主题"><svg><use id="themeIconUse" href="#i-sun"/></svg></button>
+
 <div class="card">
-  <h2>🤖 智能助手</h2>
+  <div class="brand">
+    <div class="brand-mark"><svg><use href="#i-mark"/></svg></div>
+  </div>
+  <h2>AI Assistant</h2>
   <div class="sub">登录后开始对话</div>
 
   <div class="tabs">
     <div class="tab active" onclick="switchTab('password')">密码登录</div>
-    <div class="tab" onclick="switchTab('sms')">手机登录 </div>
-    <div class="tab" onclick="switchTab('social')">扫码登录 </div>
+    <div class="tab" onclick="switchTab('sms')">手机登录</div>
+    <div class="tab" onclick="switchTab('social')">扫码登录</div>
   </div>
 
-  <!-- 密码登录 -->
   <div class="tab-content active" id="tab-password">
-    <div class="input-group"><label>用户名</label><input id="loginUser" placeholder="输入用户名"></div>
-    <div class="input-group"><label>密码</label><input id="loginPass" type="password" placeholder="输入密码"></div>
+    <div class="input-group"><label for="loginUser">用户名</label><input id="loginUser" placeholder="输入用户名" autocomplete="username"></div>
+    <div class="input-group"><label for="loginPass">密码</label><input id="loginPass" type="password" placeholder="输入密码" autocomplete="current-password"></div>
     <div class="error" id="loginError"></div>
-    <button class="btn btn-primary" onclick="login()" style="margin-top:8px">登 录</button>
-    <div class="link">没有账号？<a href="#" onclick="switchTab('password');showReg()">立即注册</a></div>
+    <button class="btn btn-primary" onclick="login()">登录</button>
+    <div class="link">没有账号？<a href="#" onclick="showReg()">立即注册</a></div>
   </div>
 
-  <!-- 手机登录 -->
-    <!-- 手机登录 -->
   <div class="tab-content" id="tab-sms">
-    <div class="input-group"><label>手机号</label><input id="smsPhone" placeholder="输入手机号"></div>
-    <div class="input-row">
-      <input id="smsCode" placeholder="验证码" style="flex:1">
-      <button class="btn-sms" id="smsBtn" onclick="sendSMS()">获取验证码</button>
+    <div class="input-group"><label for="smsPhone">手机号</label><input id="smsPhone" placeholder="输入手机号" inputmode="tel"></div>
+    <div class="input-group"><label for="smsCode">验证码</label>
+      <div class="input-row"><input id="smsCode" placeholder="输入验证码" inputmode="numeric"><button class="btn-sms" id="smsBtn" onclick="sendSMS()">获取验证码</button></div>
     </div>
     <div class="error" id="smsError"></div>
-    <button class="btn btn-primary" onclick="smsLogin()" style="margin-top:8px">登录 / 注册</button>
+    <button class="btn btn-primary" onclick="smsLogin()">登录 / 注册</button>
   </div>
 
-<div class="tab-content" id="tab-social">
-    <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#fbbf24;text-align:center">⚠ 此功能暂不可用 &nbsp;(微信/QQ 开放平台需企业营业执照认证)</div>
+  <div class="tab-content" id="tab-social">
+    <div class="notice">微信 / QQ 登录需要企业资质认证，暂不可用。</div>
     <div class="social-row">
-      <button class="social-btn" disabled style="opacity:.4;cursor:not-allowed">
-        <div style="font-size:32px;margin-bottom:4px">💬</div>微信登录
-        <div style="font-size:10px;color:#fbbf24;margin-top:2px">暂不可用</div>
-      </button>
-      <button class="social-btn" disabled style="opacity:.4;cursor:not-allowed">
-        <div style="font-size:32px;margin-bottom:4px">🐧</div>QQ登录
-        <div style="font-size:10px;color:#fbbf24;margin-top:2px">暂不可用</div>
-      </button>
+      <button class="social-btn" disabled><span class="glyph">💬</span>微信登录<small>暂不可用</small></button>
+      <button class="social-btn" disabled><span class="glyph">🐧</span>QQ 登录<small>暂不可用</small></button>
     </div>
   </div>
 </div>
 
-<!-- 注册弹窗 -->
-<!-- 注册弹窗 -->
-<div class="card" id="regCard" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10">
+<div class="card dialog-card" id="regCard">
   <h2>注册账号</h2>
-  <div class="input-group"><label>用户名</label><input id="regUser" placeholder="至少2位"></div>
-  <div class="input-group"><label>密码</label><input id="regPass" type="password" placeholder="至少6位"></div>
-  <div class="input-group"><label>手机号</label><input id="regPhone" placeholder="输入手机号"></div>
-  <div class="input-row">
-    <input id="regCode" placeholder="验证码" style="flex:1">
-    <button class="btn-sms" id="regSmsBtn" onclick="sendRegSMS()">获取验证码</button>
+  <div class="sub">手机号验证后即可使用</div>
+  <div class="input-group"><label for="regUser">用户名</label><input id="regUser" placeholder="至少 2 位"></div>
+  <div class="input-group"><label for="regPass">密码</label><input id="regPass" type="password" placeholder="至少 6 位"></div>
+  <div class="input-group"><label for="regPhone">手机号</label><input id="regPhone" placeholder="输入手机号" inputmode="tel"></div>
+  <div class="input-group"><label for="regCode">验证码</label>
+    <div class="input-row"><input id="regCode" placeholder="输入验证码" inputmode="numeric"><button class="btn-sms" id="regSmsBtn" onclick="sendRegSMS()">获取验证码</button></div>
   </div>
   <div class="error" id="regError"></div>
-  <button class="btn btn-primary" onclick="register()" style="margin-top:8px">注 册</button>
+  <button class="btn btn-primary" onclick="register()">注册</button>
   <button class="btn btn-outline" onclick="hideReg()">返回登录</button>
 </div>
 
-<!-- 手机号完善注册 -->
-<div class="card" id="phoneRegCard" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:11">
+<div class="card dialog-card" id="phoneRegCard">
   <h2>完善账号信息</h2>
-  <p class="sub">手机号已验证，请设置用户名和密码</p>
-  <div class="input-group"><label>用户名</label><input id="phoneRegUser" placeholder="至少2位"></div>
-  <div class="input-group"><label>密码</label><input id="phoneRegPass" type="password" placeholder="至少6位"></div>
+  <div class="sub">手机号已验证，请设置用户名和密码</div>
+  <div class="input-group"><label for="phoneRegUser">用户名</label><input id="phoneRegUser" placeholder="至少 2 位"></div>
+  <div class="input-group"><label for="phoneRegPass">密码</label><input id="phoneRegPass" type="password" placeholder="至少 6 位"></div>
   <div class="error" id="phoneRegError"></div>
-  <button class="btn btn-primary" onclick="completePhoneRegister()" style="margin-top:8px">完成注册</button>
+  <button class="btn btn-primary" onclick="completePhoneRegister()">完成注册</button>
 </div>
 
-<div id="overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5" onclick="hideReg()"></div>
+<div class="overlay" id="overlay" onclick="hideReg()"></div>
 
 <script>
-function switchTab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));document.querySelector('.tab:nth-child('+({password:1,sms:2,social:3}[t])+')').classList.add('active');document.getElementById('tab-'+t).classList.add('active')}
-function showReg(){document.getElementById('regCard').style.display='block';document.getElementById('overlay').style.display='block'}
-function hideReg(){document.getElementById('regCard').style.display='none';document.getElementById('phoneRegCard').style.display='none';document.getElementById('overlay').style.display='none'}
+/* ==================== Theme ==================== */
+const THEME_KEY='assistantTheme';
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  try{localStorage.setItem(THEME_KEY,t);}catch(e){}
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',t==='light'?'#F4F8F8':'#0D1418');
+  const use=document.getElementById('themeIconUse');
+  if(use)use.setAttribute('href',t==='light'?'#i-moon':'#i-sun');
+  const label=document.getElementById('themeLabel');
+  if(label)label.textContent=t==='light'?'暗色':'亮色';
+  const btn=document.getElementById('themeToggle');
+  if(btn)btn.setAttribute('aria-label',t==='light'?'切换到暗色主题':'切换到亮色主题');
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')||'dark';
+  applyTheme(cur==='dark'?'light':'dark');
+}
+applyTheme(document.documentElement.getAttribute('data-theme')||'dark');
 
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  ({password:1,sms:2,social:3}[t]);
+  document.querySelector('.tab:nth-child('+({password:1,sms:2,social:3}[t])+')').classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+}
+function showReg(){document.getElementById('regCard').style.display='block';document.getElementById('overlay').style.display='block';}
+function hideReg(){
+  document.getElementById('regCard').style.display='none';
+  document.getElementById('phoneRegCard').style.display='none';
+  document.getElementById('overlay').style.display='none';
+}
 async function api(m,u,b){
   const r=await fetch('/api/v1'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
-  return r.json()
+  return r.json();
 }
+function showError(id,msg){const e=document.getElementById(id);e.style.display='block';e.textContent=msg;}
 
 async function login(){
   const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value.trim();
   if(!u||!p)return;
   const d=await api('POST','/auth/login',{username:u,password:p});
-  if(d.code===200) location.href='/';
-  else document.getElementById('loginError').style.display='block',document.getElementById('loginError').textContent=d.message
+  if(d.code===200)location.href='/';
+  else showError('loginError',d.message);
 }
-
 let regSmsTimer=0;
 async function sendRegSMS(){
   const p=document.getElementById('regPhone').value.trim();
-  const err=document.getElementById('regError');
-  err.style.display='none';
-  if(!/^1[3-9]\d{9}$/.test(p)){err.style.display='block';err.textContent='请输入正确的手机号';return;}
+  document.getElementById('regError').style.display='none';
+  if(!/^1[3-9]\d{9}$/.test(p)){showError('regError','请输入正确的手机号');return;}
   if(regSmsTimer>0)return;
-  const b=document.getElementById('regSmsBtn'); b.disabled=true;
+  const b=document.getElementById('regSmsBtn');b.disabled=true;
   try{
     const d=await api('POST','/auth/sms/send',{phone:p});
     if(d.code===200){regSmsTimer=60;regCountdown();}
-    else{err.style.display='block';err.textContent=d.message||'发送失败';}
-  }catch(e){err.style.display='block';err.textContent='网络错误，请重试';}
+    else showError('regError',d.message||'发送失败');
+  }catch(e){showError('regError','网络错误，请重试');}
   b.disabled=false;
 }
 function regCountdown(){
   const b=document.getElementById('regSmsBtn');
-  if(regSmsTimer>0){b.textContent=regSmsTimer+'s';b.disabled=true;regSmsTimer--;setTimeout(regCountdown,1000)}
-  else{b.textContent='获取验证码';b.disabled=false}
+  if(regSmsTimer>0){b.textContent=regSmsTimer+'s';b.disabled=true;regSmsTimer--;setTimeout(regCountdown,1000);}
+  else{b.textContent='获取验证码';b.disabled=false;}
 }
 async function register(){
   const u=document.getElementById('regUser').value.trim();
   const pass=document.getElementById('regPass').value.trim();
   const phone=document.getElementById('regPhone').value.trim();
   const code=document.getElementById('regCode').value.trim();
-  const err=document.getElementById('regError');
-  err.style.display='none';
-  if(!u||u.length<2){err.style.display='block';err.textContent='用户名至少2位';return;}
-  if(!pass||pass.length<6){err.style.display='block';err.textContent='密码至少6位';return;}
-  if(!phone||!code){err.style.display='block';err.textContent='请输入手机号和验证码';return;}
-  const d=await api('POST','/auth/register',{username:u,password:pass,phone:phone,code:code});
-  if(d.code===200) location.href='/';
-  else{err.style.display='block';err.textContent=d.message}
+  document.getElementById('regError').style.display='none';
+  if(!u||u.length<2){showError('regError','用户名至少 2 位');return;}
+  if(!pass||pass.length<6){showError('regError','密码至少 6 位');return;}
+  if(!phone||!code){showError('regError','请输入手机号和验证码');return;}
+  const d=await api('POST','/auth/register',{username:u,password:pass,phone,code});
+  if(d.code===200)location.href='/';
+  else showError('regError',d.message);
 }
-
 let smsTimer=0;
 async function sendSMS(){
   const p=document.getElementById('smsPhone').value.trim();
-  const err=document.getElementById('smsError');
-  err.style.display='none';
-  if(!/^1[3-9]\d{9}$/.test(p)){err.style.display='block';err.textContent='请输入正确的手机号';return;}
+  document.getElementById('smsError').style.display='none';
+  if(!/^1[3-9]\d{9}$/.test(p)){showError('smsError','请输入正确的手机号');return;}
   if(smsTimer>0)return;
   document.getElementById('smsBtn').disabled=true;
   try{
     const d=await api('POST','/auth/sms/send',{phone:p});
-    if(d.code===200){smsTimer=60;countdown();err.style.display='none';}
-    else{err.style.display='block';err.textContent=d.message||'发送失败';}
-  }catch(e){
-    err.style.display='block';err.textContent='网络错误，请重试';
-  }
+    if(d.code===200){smsTimer=60;countdown();}
+    else showError('smsError',d.message||'发送失败');
+  }catch(e){showError('smsError','网络错误，请重试');}
   document.getElementById('smsBtn').disabled=false;
 }
-
 function countdown(){
   const b=document.getElementById('smsBtn');
-  if(smsTimer>0){b.textContent=smsTimer+'s';b.disabled=true;smsTimer--;setTimeout(countdown,1000)}
-  else{b.textContent='获取验证码';b.disabled=false}
+  if(smsTimer>0){b.textContent=smsTimer+'s';b.disabled=true;smsTimer--;setTimeout(countdown,1000);}
+  else{b.textContent='获取验证码';b.disabled=false;}
 }
-
 async function smsLogin(){
   const p=document.getElementById('smsPhone').value.trim(),c=document.getElementById('smsCode').value.trim();
-  const err=document.getElementById('smsError');
-  err.style.display='none';
+  document.getElementById('smsError').style.display='none';
   if(!p||!c)return;
   const d=await api('POST','/auth/sms/login',{phone:p,code:c});
-  if(d.code===200 && d.data && d.data.need_complete_registration){
+  if(d.code===200&&d.data&&d.data.need_complete_registration){
     document.getElementById('phoneRegCard').style.display='block';
     document.getElementById('overlay').style.display='block';
-  }else if(d.code===200){ location.href='/'; }
-  else{err.style.display='block';err.textContent=d.message}
+  }else if(d.code===200)location.href='/';
+  else showError('smsError',d.message);
 }
 async function completePhoneRegister(){
   const u=document.getElementById('phoneRegUser').value.trim();
   const pass=document.getElementById('phoneRegPass').value.trim();
-  const err=document.getElementById('phoneRegError');
-  err.style.display='none';
-  if(!u||u.length<2){err.style.display='block';err.textContent='用户名至少2位';return;}
-  if(!pass||pass.length<6){err.style.display='block';err.textContent='密码至少6位';return;}
+  document.getElementById('phoneRegError').style.display='none';
+  if(!u||u.length<2){showError('phoneRegError','用户名至少 2 位');return;}
+  if(!pass||pass.length<6){showError('phoneRegError','密码至少 6 位');return;}
   const d=await api('POST','/auth/phone/complete',{username:u,password:pass});
-  if(d.code===200) location.href='/';
-  else{err.style.display='block';err.textContent=d.message}
+  if(d.code===200)location.href='/';
+  else showError('phoneRegError',d.message);
 }
 
-function showQR(type){
-  document.getElementById('qrBox').style.display='block';
-  document.getElementById('qrIcon').textContent=type==='wechat'?'💬':'🐧';
-  document.getElementById('qrText').textContent='请使用'+(type==='wechat'?'微信':'QQ')+'扫码';
-}
+document.querySelectorAll('.input-group input').forEach(el=>{
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'){const card=el.closest('.card');const btn=card.querySelector('.btn-primary');if(btn)btn.click();}});
+});
 </script>
 </body>
 </html>

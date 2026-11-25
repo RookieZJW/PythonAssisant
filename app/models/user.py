@@ -52,13 +52,13 @@ class User(db.Model):
 
     @classmethod
     def register_full(cls, username, password, phone, nickname=None):
-        """???????? + ?? + ????????"""
+        """完整注册：用户名 + 密码 + 手机号"""
         if not username or not password or not phone:
-            return None, "??????????????"
+            return None, "用户名、密码和手机号不能为空"
         if cls.query.filter_by(username=username).first():
-            return None, "??????"
+            return None, "用户名已存在"
         if cls.query.filter_by(phone=phone).first():
-            return None, "??????"
+            return None, "手机号已注册"
         user = cls(
             username=username,
             password_hash=cls.hash_password(password),

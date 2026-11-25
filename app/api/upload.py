@@ -9,10 +9,13 @@
 文件上传后会解析为纯文本，然后立即从磁盘删除（不留存文件），
 解析后的内容存储在内存字典中供对话接口使用。
 """
+import logging
 import os
 from flask import Blueprint, request
 from werkzeug.utils import secure_filename
 from app.utils.response import success, error
+
+logger = logging.getLogger(__name__)
 
 # 创建名为 'upload' 的蓝图，用于组织文件上传相关的路由
 upload_bp = Blueprint('upload', __name__)
@@ -69,8 +72,9 @@ def _parse_file(filepath, filename):
         with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
             return f.read()
 
-    # ---- PDF 文件：使用 PyPDF2 解析 ----
+    # ---- PDF 文件：先走文本层，扫描件自动回退 OCR ----
     if ext == 'pdf':
+        content = ''
         try:
             from PyPDF2 import PdfReader
             reader = PdfReader(filepath)
@@ -80,9 +84,22 @@ def _parse_file(filepath, filename):
                 t = page.extract_text()
                 if t:
                     text.append(t)
-            return '\n\n'.join(text)
+            content = '\n\n'.join(text)
         except ImportError:
-            return "[错误] 未安装 PyPDF2，无法解析 PDF。请运行 pip install PyPDF2"
+            logger.warning('[PDF] 未安装 PyPDF2，直接尝试 OCR')
+        except Exception as e:
+            logger.warning('[PDF] 文本层解析失败，尝试 OCR：%s', e)
+
+        if content.strip():
+            return content
+
+        # 没有文字层：扫描/图片型 PDF，交给本地 OCR
+        try:
+            from app.services.pdf_ocr_service import extract_text
+            return extract_text(filepath)
+        except Exception as e:
+            logger.exception('[PDF] OCR 兜底调用失败')
+            return '[错误] 扫描版 PDF OCR 兜底失败：%s' % e
 
     # ---- Word 文档：使用 python-docx 解析 ----
     if ext in ('docx', 'doc'):

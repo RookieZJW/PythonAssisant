@@ -5,11 +5,9 @@
 - 健康检查（Health Check）
 - 可用模型列表查询
 - 可用工具列表查询与执行
-- 本地媒体文件代理（解决浏览器跨域限制）
 - Token 用量统计
 """
-import os
-from flask import Blueprint, request, send_file
+from flask import Blueprint, request
 from app.services.model_service import ModelService
 from app.services.tool_service import ToolService
 from app.config.settings import settings
@@ -94,41 +92,6 @@ def execute_tool(tool_name):
     params = request.get_json() or {}
     result = ToolService.execute_tool(tool_name, **params)
     return success({"result": result})
-
-
-@system_bp.route('/local-media', methods=['GET'])
-def local_media():
-    """
-    代理本地媒体文件（图片/视频）
-    --------------------------------
-    由于浏览器的安全策略限制，前端无法直接通过 file:// 协议访问本地文件。
-    此接口作为代理，将本地文件以 HTTP 响应形式提供给前端。
-    包含安全检查：仅允许常见的图片和视频格式，防止任意文件读取。
-
-    查询参数:
-        - path: 本地文件的绝对路径
-
-    返回:
-        媒体文件的二进制流，包含正确的 MIME 类型
-    """
-    filepath = request.args.get('path', '')
-    if not filepath or not os.path.isfile(filepath):
-        return error("文件不存在: " + filepath, 404)
-
-    # 安全检查：仅允许常见媒体格式，防止任意文件访问
-    ext = os.path.splitext(filepath)[1].lower()
-    allowed = {'.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg','.mp4','.webm','.mov','.avi'}
-    if ext not in allowed:
-        return error("不支持的媒体格式: " + ext, 400)
-
-    # 根据文件扩展名判断 MIME 类型
-    mime_map = {
-        '.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png',
-        '.gif':'image/gif','.webp':'image/webp','.bmp':'image/bmp',
-        '.svg':'image/svg+xml','.mp4':'video/mp4','.webm':'video/webm',
-        '.mov':'video/quicktime','.avi':'video/x-msvideo',
-    }
-    return send_file(filepath, mimetype=mime_map.get(ext, 'application/octet-stream'))
 
 
 @system_bp.route('/stats', methods=['GET'])

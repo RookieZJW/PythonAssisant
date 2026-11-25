@@ -31,7 +31,9 @@ workers = multiprocessing.cpu_count() * 2 + 1
 
 # Worker 类型：使用 gevent（基于协程的异步 worker）
 # 相比默认的同步 worker，gevent 能高效处理大量并发连接
-# 特别适合需要 SSE 流式响应的场景
+# 特别适合需要 SSE 流式响应的场景（对话流式输出、批量上传进度流）
+# 注意：本项目 SocketIO 为 threading 模式，WebSocket 在 Gunicorn 下
+# 会自动退化为长轮询；需要完整 WebSocket 时请用 python run.py 启动
 worker_class = "gevent"
 
 # 每个 Worker 的最大并发连接数
@@ -48,6 +50,10 @@ timeout = 120
 # Keep-Alive 连接保持时间（秒）
 # 在 5 秒内复用同一个 TCP 连接处理多个请求
 keepalive = 5
+
+# Worker 处理约 1 万个请求后自动重启，防止长期运行内存缓慢增长
+max_requests = 10000
+max_requests_jitter = 1000
 
 
 # ====== 日志配置 ======

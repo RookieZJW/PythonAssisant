@@ -49,11 +49,69 @@ def init_extensions(app):
     # 自动在 MySQL 中创建对应的表。表已存在则跳过。
     with app.app_context():
         db.create_all()
+        _ensure_conversation_mode_columns()
+        _ensure_kb_content_column()
 
     # ---- 步骤4: 注册 SocketIO 事件 ----
     # 从 voice.py 导入事件注册函数, 让它能处理 /tts 相关的 WebSocket 消息
     from .api.voice import register_socketio_events
     register_socketio_events(socketio)
+
+
+def _ensure_conversation_mode_columns():
+    """
+    轻量迁移：给已有 conversations 表补上 mode / kb_id 字段。
+    db.create_all() 只建新表，不会修改旧表结构；这里做幂等补列。
+    """
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(db.engine)
+        if 'conversations' not in inspector.get_table_names():
+            return
+        columns = {c['name'] for c in inspector.get_columns('conversations')}
+        with db.engine.begin() as conn:
+            if 'mode' not in columns:
+                conn.execute(text(
+                    "ALTER TABLE conversations ADD COLUMN mode VARCHAR(16) NOT NULL DEFAULT 'normal'"
+                ))
+            if 'kb_id' not in columns:
+                conn.execute(text(
+                    "ALTER TABLE conversations ADD COLUMN kb_id VARCHAR(36) NULL"
+                ))
+            conn.execute(text(
+                "UPDATE conversations SET mode='normal' "
+                "WHERE mode IS NULL OR mode NOT IN ('normal','kb')"
+            ))
+        print("[DB] conversations.mode / kb_id 已就绪")
+    except Exception as e:
+        print(f"[DB] 会话模式字段迁移失败：{e}")
+
+
+def _ensure_kb_content_column():
+    """
+    轻量迁移：kb_documents.content 从 TEXT(64KB 字节) 扩到 MEDIUMTEXT(16MB)。
+    中文在 utf8mb4 下每字 3 字节，一篇 3 万字左右的 Word/PDF 就会超过 65535 字节，
+    插入时会报 "Data too long for column 'content'"。这里做幂等升级。
+    """
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(db.engine)
+        if 'kb_documents' not in inspector.get_table_names():
+            return
+        col = next((c for c in inspector.get_columns('kb_documents')
+                    if c['name'] == 'content'), None)
+        if not col:
+            return
+        # SQLAlchemy 的 Text 类型在 MySQL 下会编译成 TEXT
+        if 'mediumtext' in str(col['type']).lower():
+            return
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE kb_documents MODIFY content MEDIUMTEXT NOT NULL"
+            ))
+        print("[DB] kb_documents.content 已升级为 MEDIUMTEXT")
+    except Exception as e:
+        print(f"[DB] 知识库正文列类型迁移失败：{e}")
 
 
 def _ensure_database_exists(db_uri):

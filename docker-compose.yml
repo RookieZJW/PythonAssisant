@@ -1,4 +1,13 @@
-version: '3.8'
+# Python 多功能智能助手 生产环境编排
+# =====================================
+# 包含：应用(Gunicorn) + MySQL + Redis + Milvus 向量库（知识库语义检索）
+# 使用：cd PythonAssistant && docker compose up -d --build
+#
+# 注意：
+# 1. .env 中需要设置 MYSQL_ROOT_PASSWORD / MYSQL_PASSWORD（下面 mysql 服务要用）
+# 2. .env 里的 DATABASE_URL 在 compose 中会被覆盖为指向 mysql 服务，
+#    如需改用户名请同步修改 app 服务的 environment 段
+# 3. Milvus 数据落在命名卷 milvus_data，删除容器不会丢向量数据
 
 services:
   app:
@@ -7,12 +16,38 @@ services:
       - "8000:8000"
     environment:
       - FLASK_ENV=production
+      # 覆盖 .env 中的 localhost，指向 compose 内的 mysql 服务
+      - DATABASE_URL=mysql+pymysql://assistant:${MYSQL_PASSWORD:-changeme-assistant}@mysql:3306/smart_assistant
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      milvus:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme-root}
+      MYSQL_DATABASE: smart_assistant
+      MYSQL_USER: assistant
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme-assistant}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-changeme-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
   redis:
@@ -23,5 +58,32 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  # Milvus Standalone（内嵌 etcd + 本地存储，单容器即可跑）
+  # 知识库检索依赖 localhost:19530（容器内通过服务名 milvus 访问）
+  milvus:
+    image: milvusdb/milvus:v2.6-latest   # 建议固定到具体小版本，如 v2.6.0
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_USE_EMBED: "true"
+      ETCD_DATA_DIR: /var/lib/milvus/etcd
+      ETCD_CONFIG_PATH: /milvus/configs/embedEtcd.yaml
+      COMMON_STORAGETYPE: local
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"   # gRPC（应用连接）
+      - "9091:9091"     # 健康检查 / 指标
+    security_opt:
+      - seccomp:unconfined
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
+  mysql_data:
   redis_data:
+  milvus_data:

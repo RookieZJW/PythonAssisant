@@ -21,20 +21,53 @@ USE smart_assistant;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-DROP TABLE IF EXISTS `backgrounds`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `backgrounds` (
+DROP TABLE IF EXISTS `kb_chunks`;
+CREATE TABLE `kb_chunks` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `url` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `bg_type` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mode` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `size` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `doc_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `doc_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `position` int DEFAULT 0,
   `created_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_chunks_kb` (`kb_id`),
+  KEY `ix_kb_chunks_doc` (`doc_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `kb_documents`;
+CREATE TABLE `kb_documents` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size` int DEFAULT 0,
+  `chunk_count` int DEFAULT 0,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_documents_kb` (`kb_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+DROP TABLE IF EXISTS `kb_shares`;
+CREATE TABLE `kb_shares` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `owner_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `shared_with` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_kb_share` (`kb_id`,`shared_with`),
+  KEY `ix_kb_shares_user` (`shared_with`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+DROP TABLE IF EXISTS `knowledge_bases`;
+CREATE TABLE `knowledge_bases` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `user_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `conversations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -46,8 +79,12 @@ CREATE TABLE `conversations` (
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   `role_id` varchar(36) DEFAULT NULL,
+  `mode` varchar(16) NOT NULL DEFAULT 'normal',
+  `kb_id` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `ix_conversations_user_id` (`user_id`)
+  KEY `ix_conversations_user_id` (`user_id`),
+  KEY `ix_conversations_mode` (`mode`),
+  KEY `ix_conversations_kb_id` (`kb_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `messages`;
