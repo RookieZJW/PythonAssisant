@@ -309,6 +309,39 @@ def match_table(query, tables, min_score=0.42):
     return (best, best_score) if best_score >= min_score else (None, best_score)
 
 
+# ---- 卡片持久化标记（刷新后还原下载卡片用） ----
+import base64
+import json as _json
+
+_CARD_RE = re.compile(r'\[\[KB_TABLE_CARD:([A-Za-z0-9+/=]+)\]\]')
+
+
+def embed_card_marker(content, card):
+    """把表格卡片信息编码成标记，追加到消息正文里一起存库。
+
+    用 base64 避免 JSON 里的特殊字符破坏标记结构；前端 atob 解码还原。
+    """
+    if not card:
+        return content
+    payload = base64.b64encode(
+        _json.dumps(card, ensure_ascii=False).encode('utf-8')).decode('ascii')
+    return (content or '') + '\n\n[[KB_TABLE_CARD:%s]]' % payload
+
+
+def strip_card_marker(content):
+    """从消息正文里去掉标记，返回（纯文本, 卡片字典或 None）。"""
+    text = content or ''
+    m = _CARD_RE.search(text)
+    if not m:
+        return text, None
+    card = None
+    try:
+        card = _json.loads(base64.b64decode(m.group(1)).decode('utf-8'))
+    except Exception:
+        pass
+    return text.replace(m.group(0), '').rstrip(), card
+
+
 def table_hit_payload(table, base_url='/api/v1'):
     """构造给前端的表格命中提示（只含真实文件的下载链接）。"""
     tid = table.get('id') if isinstance(table, dict) else table.id

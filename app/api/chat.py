@@ -227,7 +227,12 @@ def chat_stream():
                         mode=mode, kb_id=kb_id,
                     )
                     Message.create(conv_tbl.id, 'user', original_message)
-                    Message.create(conv_tbl.id, 'assistant', answer)
+                    # 把下载卡片标记写进消息，刷新后可还原
+                    stored_answer = answer
+                    if table_hit:
+                        stored_answer = ts.embed_card_marker(
+                            hint + answer, ts.table_hit_payload(table_hit)['__table_card__'])
+                    Message.create(conv_tbl.id, 'assistant', stored_answer)
                     yield "data: [DONE]\n\n"
                     return
 
@@ -256,13 +261,28 @@ def chat_stream():
                 # 以 SSE 格式推送每个数据块: "data: <json>\n\n"
                 yield f"data: {_json.dumps(chunk)}\n\n"
 
-            # 步骤3: 将原始消息（不包含文件内容）保存到数据库
-            # 附件信息通过消息文本前标注的方式体现
+            # 步骤3: 组装要持久化的回答。
+            # 高置信度命中真实表格时，把推荐文字 + 下载卡片标记一起存进消息，
+            # 这样刷新页面回放历史时也能还原卡片（标记不生成表格，只存真实文件链接）。
+            stored_answer = full_response
+            table_tip = ''
+            table_card = None
+            if table_hit is not None:
+                from app.services import kb_table_service as ts
+                _name = table_hit.table_name or ''
+                import re as _re
+                if _re.match(r'^表格\s*\d+$', _name) and table_hit.doc_name:
+                    _name = _re.sub(r'\.[^.]+$', '', table_hit.doc_name)
+                table_tip = '\n\n另外，知识库里有你可能需要的表格「%s」，可直接下载原文件：' % _name
+                table_card = ts.table_hit_payload(table_hit)['__table_card__']
+                stored_answer = ts.embed_card_marker(full_response + table_tip, table_card)
+
+            # 将原始消息（不包含文件内容）保存到数据库
             display_msg = original_message
             if attach_filename:
                 display_msg = '📎 '+attach_filename+'\n'+original_message
             Message.create(conversation.id, "user", display_msg)
-            Message.create(conversation.id, "assistant", full_response)
+            Message.create(conversation.id, "assistant", stored_answer)
 
             # 步骤4: 若是新建会话（标题为"新对话"），
             # 自动根据用户的第一条输入生成会话标题
@@ -271,18 +291,11 @@ def chat_stream():
                 from app.extensions import db
                 db.session.commit()
 
-            # 步骤5: 智能推荐 —— 高置信度命中真实表格时，在回答后附加下载卡片。
-            # 卡片里的 URL 指向留存原件，取不到就 404，全程不生成表格。
-            if table_hit is not None:
-                from app.services import kb_table_service as ts
-                _name = table_hit.table_name or ''
-                import re as _re
-                if _re.match(r'^表格\s*\d+$', _name) and table_hit.doc_name:
-                    _name = _re.sub(r'\.[^.]+$', '', table_hit.doc_name)
-                tip = '\n\n另外，知识库里有你可能需要的表格「%s」，可直接下载原文件：' % _name
-                for ch in tip:
+            # 步骤5: 实时推送推荐文字与卡片事件（存库已在上面完成）
+            if table_tip:
+                for ch in table_tip:
                     yield 'data: ' + _json.dumps(ch) + '\n\n'
-                yield 'data: ' + _json.dumps(ts.table_hit_payload(table_hit)) + '\n\n'
+                yield 'data: ' + _json.dumps({'__table_card__': table_card}) + '\n\n'
 
             # 发送流结束标记
             yield "data: [DONE]\n\n"

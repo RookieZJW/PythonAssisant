@@ -1677,15 +1677,27 @@ function addMsg(role,content,scroll=true,iconOverride=null,createdAt=null){
   row.className='msg-row '+role;
   const avatar=role==='user'?'👤':(iconOverride||getAssistantIcon());
   const time=formatMsgTime(createdAt);
-  const display=renderMd(content,true);
+  // 历史消息里可能含表格下载卡片标记：剥离后单独还原成卡片
+  let cardData=null,cleanContent=content||'';
+  const m=cleanContent.match(/\[\[KB_TABLE_CARD:([A-Za-z0-9+/=]+)\]\]/);
+  if(m){
+    try{
+      const bin=atob(m[1]);
+      const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+      cardData=JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      cleanContent=cleanContent.replace(m[0],'').trim();
+    }catch(e){}
+  }
+  const display=renderMd(cleanContent,true);
   row.innerHTML=
     '<div class="msg-avatar">'+avatar+'</div>'+
     '<div class="msg-body"><div class="msg-bubble">'+display+'</div>'+
     '<div class="msg-meta"><span>'+time+'</span><span class="msg-tokens"></span></div></div>';
   msgBox.appendChild(row);
+  if(cardData){const bubble=row.querySelector('.msg-bubble');if(bubble)appendTableCard(bubble,cardData);}
   if(scroll)msgBox.scrollTop=msgBox.scrollHeight;
   const tokSpan=row.querySelector('.msg-tokens');
-  if(tokSpan)tokSpan.textContent=estimateTokens(content)+' tokens';
+  if(tokSpan)tokSpan.textContent=estimateTokens(cleanContent)+' tokens';
   if(role==='assistant'&&typeof hljs!=='undefined')row.querySelectorAll('pre code').forEach(b=>hljs.highlightElement(b));
   return row.querySelector('.msg-bubble');
 }
