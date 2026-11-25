@@ -9,7 +9,7 @@
 
 import re                              # 导入正则表达式模块，用于文本处理和 Token 估算
 from app.extensions import db          # 导入 Flask-SQLAlchemy 数据库扩展实例
-from datetime import datetime           # 导入 datetime 用于处理时间戳
+from datetime import datetime, timezone  # timezone 用于把 naive UTC 标成带时区的 ISO 字符串
 
 
 class Message(db.Model):
@@ -145,16 +145,16 @@ class Message(db.Model):
         """
         将消息实例转换为字典格式（用于 API 输出）
 
-        序列化为字典，便于 JSON 序列化后返回给前端或 AI 模型 API。
-        注意：此方法仅返回 role 和 content 两个关键字段，
-        不包含 ID、tokens 等内部信息。
-
-        返回:
-            dict: 包含消息角色和内容的字典，结构如下：
-                - role: 消息发送角色（user/assistant/system）
-                - content: 消息文本内容
+        返回 role / content / created_at 三个字段。
+        created_at 由 datetime.utcnow() 写入，是不带时区信息的 UTC 时间；
+        这里显式标注为 UTC 再输出 ISO 字符串（形如 2026-11-24T08:48:21+00:00），
+        前端 new Date() 才能自动换算成浏览器本地时区，否则会被当成当地时间而差 8 小时。
         """
+        created_at = None
+        if self.created_at:
+            created_at = self.created_at.replace(tzinfo=timezone.utc).isoformat()
         return {
-            "role": self.role,          # 消息角色：user / assistant / system
-            "content": self.content,    # 消息文本内容
+            "role": self.role,               # user / assistant / system
+            "content": self.content,         # 消息正文
+            "created_at": created_at,        # 消息产生时间（UTC，带 +00:00）
         }

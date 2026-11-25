@@ -16,7 +16,7 @@ from app.models.message import Message
 from app.models.role import Role
 from app.utils.response import success, error
 from app.extensions import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 # 创建名为 'conversation' 的蓝图，用于组织会话相关的路由
 conversation_bp = Blueprint('conversation', __name__)
@@ -85,6 +85,25 @@ def list_conversations():
         user_id=uid or 'anonymous', page=page, page_size=page_size, mode=mode
     )
     return success(result)
+
+
+def _local_time_str(dt, fmt='%Y-%m-%d %H:%M'):
+    """把 UTC 时间换算成服务器本地时区后再格式化。
+
+    - 会话 created_at 是 datetime.utcnow() 写入的 naive UTC datetime；
+    - 消息 created_at 经 Message.to_dict() 输出为带 +00:00 的 ISO 字符串。
+    两者若不显式换算，直接 strftime 都会比北京时间少 8 小时。
+    """
+    if not dt:
+        return ''
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+        except ValueError:
+            return dt
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone().strftime(fmt)
 
 
 @conversation_bp.route('/conversations/<conversation_id>', methods=['GET'])
@@ -228,11 +247,13 @@ def export_conversation(conversation_id):
         lines.append(f"标题: {conversation.title}")
         lines.append(f"角色: {role_name}")
         lines.append(f"模型: {conversation.model}")
-        lines.append(f"时间: {conversation.created_at.strftime('%Y-%m-%d %H:%M')}")
+        lines.append(f"时间: {_local_time_str(conversation.created_at)}")
         lines.append("=" * 50)
         for m in messages:
             prefix = "🧑 用户" if m['role'] == 'user' else "🤖 助手"
-            lines.append(f"\n{prefix}:\n{m['content']}")
+            stamp = _local_time_str(m.get('created_at'))
+            head = prefix + (' [' + stamp + ']' if stamp else '')
+            lines.append(f"\n{head}:\n{m['content']}")
         content = "\n".join(lines)
         filename = f"{conversation.title}.txt"
         mime = "text/plain; charset=utf-8"
@@ -241,14 +262,16 @@ def export_conversation(conversation_id):
         lines = []
         lines.append(f"# {conversation.title}")
         lines.append("")
-        lines.append(f"> 角色: {role_name} | 模型: {conversation.model} | {conversation.created_at.strftime('%Y-%m-%d %H:%M')}")
+        lines.append(f"> 角色: {role_name} | 模型: {conversation.model} | {_local_time_str(conversation.created_at)}")
         lines.append("")
         lines.append("---")
         for m in messages:
+            stamp = _local_time_str(m.get('created_at'))
+            tag = ' · ' + stamp if stamp else ''
             if m['role'] == 'user':
-                lines.append(f"\n### 🧑 用户\n\n{m['content']}\n")
+                lines.append(f"\n### 🧑 用户{tag}\n\n{m['content']}\n")
             else:
-                lines.append(f"\n### 🤖 {role_name}\n\n{m['content']}\n")
+                lines.append(f"\n### 🤖 {role_name}{tag}\n\n{m['content']}\n")
         content = "\n".join(lines)
         filename = f"{conversation.title}.md"
         mime = "text/markdown; charset=utf-8"

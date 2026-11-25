@@ -1527,7 +1527,7 @@ async function switchConversation(convId){
     msgBox.innerHTML='';
     const msgs=data.data.messages||[];
     const icon=(data.data.mode==='kb')?'📚':(convRoleIcon||getAssistantIcon());
-    msgs.forEach(m=>addMsg(m.role,m.content,false,m.role==='assistant'?icon:null));
+    msgs.forEach(m=>addMsg(m.role,m.content,false,m.role==='assistant'?icon:null,m.created_at));
     const lastAi=msgs.filter(m=>m.role==='assistant').pop();
     if(lastAi)lastAssistantText=lastAi.content;
     if(!msgs.length)msgBox.innerHTML='<div class="msg-row assistant"><div class="msg-avatar">'+icon+'</div><div class="msg-body"><div class="msg-bubble">继续对话吧。</div></div></div>';
@@ -1552,11 +1552,13 @@ function exportConversation(){
   const roleName=role?role.name:'助手';
   const title=(conversations.find(c=>c.id===currentConvId)||{}).title||'新对话';
   const modeText=currentMode==='kb'?('知识库：'+(getKbName(currentKbId)||'未选择')):('角色：'+roleName);
-  let md='# '+title+'\n\n> '+modeText+' ｜ 模型：'+(currentModel==='deepseek'?'DeepSeek':'通义千问')+' ｜ '+new Date().toLocaleString('zh-CN')+'\n\n---\n';
+  let md='# '+title+'\n\n> '+modeText+' ｜ 模型：'+(currentModel==='deepseek'?'DeepSeek':'通义千问')+' ｜ 导出时间：'+new Date().toLocaleString('zh-CN')+'\n\n---\n';
   rows.forEach(row=>{
     const bubble=row.querySelector('.msg-bubble');
     if(!bubble)return;
-    md+=row.classList.contains('user')?'\n### 用户\n\n'+bubble.textContent+'\n':'\n### '+roleName+'\n\n'+bubble.textContent+'\n';
+    const t=((row.querySelector('.msg-meta span')||{}).textContent||'').trim();
+    const tag=t?(' · '+t):'';
+    md+=row.classList.contains('user')?'\n### 用户'+tag+'\n\n'+bubble.textContent+'\n':'\n### '+roleName+tag+'\n\n'+bubble.textContent+'\n';
   });
   const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -1604,11 +1606,29 @@ function copyCode(btn){
     setTimeout(()=>{btn.textContent='复制';btn.classList.remove('copied');},2000);
   });
 }
-function addMsg(role,content,scroll=true,iconOverride=null){
+function _pad2(n){return n<10?'0'+n:''+n;}
+function _sameLocalDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+function formatMsgTime(createdAt){
+  // createdAt 是后端返回的 UTC ISO 字符串（形如 2026-11-24T08:48:21+00:00）；
+  // new Date() 会自动把 UTC 换算成浏览器本地时区（国内即 +8）。
+  // 为空表示"此刻新产生的消息"，退回当前时间。
+  const now=new Date();
+  let d=now;
+  if(createdAt){
+    const parsed=new Date(createdAt);
+    if(!isNaN(parsed.getTime()))d=parsed;
+  }
+  const hm=_pad2(d.getHours())+':'+_pad2(d.getMinutes());
+  if(_sameLocalDay(d,now))return hm;                       // 今天：只显示时刻
+  const yesterday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
+  if(_sameLocalDay(d,yesterday))return '昨天 '+hm;         // 昨天：带"昨天"
+  return d.getFullYear()+'-'+_pad2(d.getMonth()+1)+'-'+_pad2(d.getDate())+' '+hm; // 更早：完整日期
+}
+function addMsg(role,content,scroll=true,iconOverride=null,createdAt=null){
   const row=document.createElement('div');
   row.className='msg-row '+role;
   const avatar=role==='user'?'👤':(iconOverride||getAssistantIcon());
-  const time=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  const time=formatMsgTime(createdAt);
   const display=renderMd(content,true);
   row.innerHTML=
     '<div class="msg-avatar">'+avatar+'</div>'+
