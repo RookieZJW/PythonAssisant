@@ -180,40 +180,58 @@ def chat_stream():
         """
         import json as _json
         try:
-            # 知识库模式：识别"要表格"意图，命中真实表格则直接返回下载卡片，
-            # 未命中则明确说明没有。两种情况都不走大模型，杜绝生成不存在的表格。
-            if mode == 'kb':
+            # 知识库模式：智能推荐表格。
+            # 对用户的任何提问，都在真实表格库里按"问题语义"匹配；
+            # 命中则给下载卡片，未命中则不给链接。两种情况都不让模型生成表格。
+            table_hit = None
+            explicit_want = False
+            if mode == 'kb' and kb_id:
                 from app.services import kb_table_service as ts
                 from app.models.knowledge_base import KBTable
-                if ts.wants_table(original_message) and kb_id:
-                    # 知识库权限类错误仍需拦截，仅对"暂无可检索内容"放行
-                    if kb_context_error and '暂无可检索' not in kb_context_error:
-                        yield 'data: [ERROR] ' + kb_context_error + '\n\n'
-                        return
-                    tables = KBTable.query.filter_by(kb_id=kb_id).all()
-                    hit = ts.match_table(original_message, tables)
-                    if hit:
-                        hint = '在知识库中找到表格「%s」（来源：%s），这是上传的原始文件，可直接下载：\n\n' \
-                               % (hit.table_name, hit.doc_name)
+                explicit_want = ts.wants_table(original_message)
+                # 权限类错误仍需拦截，仅对"暂无可检索内容"放行（表格可独立命中）
+                if kb_context_error and '暂无可检索' not in kb_context_error \
+                        and not explicit_want:
+                    yield 'data: [ERROR] ' + kb_context_error + '\n\n'
+                    return
+                tables = KBTable.query.filter_by(kb_id=kb_id).all()
+                hit, score = ts.match_table(original_message, tables)
+                # 明确索要时门槛低一些，智能推荐时门槛高一些，避免误推
+                threshold = 0.40 if explicit_want else 0.55
+                if hit and score >= threshold:
+                    table_hit = hit
+
+                # 表格名是"表格 1"这类默认值时，用文档名作为展示名
+                def _display_name(tb):
+                    import re as _re
+                    n = tb.table_name or ''
+                    if _re.match(r'^表格\s*\d+$', n) and tb.doc_name:
+                        return _re.sub(r'\.[^.]+$', '', tb.doc_name)
+                    return n
+
+                # 明确索要表格：直接给结果，不走大模型（杜绝生成不存在的表格）
+                if explicit_want:
+                    if table_hit:
+                        hint = '在知识库中找到表格「%s」，这是上传的原始文件，可直接下载：\n\n' \
+                               % _display_name(table_hit)
                         for ch in hint:
                             yield 'data: ' + _json.dumps(ch) + '\n\n'
-                        yield 'data: ' + _json.dumps(ts.table_hit_payload(hit)) + '\n\n'
+                        yield 'data: ' + _json.dumps(ts.table_hit_payload(table_hit)) + '\n\n'
+                        answer = '已返回表格「%s」的下载链接' % _display_name(table_hit)
                     else:
-                        msg = '知识库中没有找到你需要的表格。我只提供库中已上传的真实文件，不会生成新表格。'
-                        for ch in msg:
+                        answer = '知识库中没有找到你需要的表格。我只提供库中已上传的真实文件，不会生成新表格。'
+                        for ch in answer:
                             yield 'data: ' + _json.dumps(ch) + '\n\n'
-                    # 持久化这条问答，保证历史记录完整
                     conv_tbl, _, _ = ChatService.prepare_chat_context(
                         conversation_id, original_message, model_type, None, None,
                         mode=mode, kb_id=kb_id,
                     )
                     Message.create(conv_tbl.id, 'user', original_message)
-                    Message.create(conv_tbl.id, 'assistant',
-                                   ('已返回表格下载链接' if hit else msg))
+                    Message.create(conv_tbl.id, 'assistant', answer)
                     yield "data: [DONE]\n\n"
                     return
 
-            # 非"要表格"意图时，知识库错误按原逻辑拦截
+            # 知识库错误按原逻辑拦截
             if kb_context_error:
                 yield 'data: [ERROR] ' + kb_context_error + '\n\n'
                 return
@@ -252,6 +270,19 @@ def chat_stream():
                 conversation.title = user_input[:30] + ("..." if len(user_input) > 30 else "")
                 from app.extensions import db
                 db.session.commit()
+
+            # 步骤5: 智能推荐 —— 高置信度命中真实表格时，在回答后附加下载卡片。
+            # 卡片里的 URL 指向留存原件，取不到就 404，全程不生成表格。
+            if table_hit is not None:
+                from app.services import kb_table_service as ts
+                _name = table_hit.table_name or ''
+                import re as _re
+                if _re.match(r'^表格\s*\d+$', _name) and table_hit.doc_name:
+                    _name = _re.sub(r'\.[^.]+$', '', table_hit.doc_name)
+                tip = '\n\n另外，知识库里有你可能需要的表格「%s」，可直接下载原文件：' % _name
+                for ch in tip:
+                    yield 'data: ' + _json.dumps(ch) + '\n\n'
+                yield 'data: ' + _json.dumps(ts.table_hit_payload(table_hit)) + '\n\n'
 
             # 发送流结束标记
             yield "data: [DONE]\n\n"

@@ -1128,14 +1128,19 @@ async function loadKbTables(kbId){
     if(badge)badge.textContent=tables.length;
     box.innerHTML=tables.length?tables.map(t=>{
       const quality=Math.round((t.fill_rate||0)*100);
-      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%';
+      // 默认名"表格 1"不直观时，用文档名作为主标题
+      const isDefault=/^表格\s*\d+$/.test(t.table_name||'');
+      const docBase=(t.doc_name||'').replace(/\.[^.]+$/,'');
+      const title=isDefault&&docBase?docBase:(t.table_name||'表格');
+      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%'+
+        (isDefault&&docBase?(' · '+(t.table_name)):'');
       const dl=t.can_download
         ? '<a class="icon-btn" title="下载原文件" href="'+escHtml('/api/v1/kb/'+kbId+'/tables/'+t.id+'/download')+'" download>'+svgUse('export','ico ico-sm')+'</a>'
         : '<span class="kb-no-ori" title="旧文档未留存原件">无原件</span>';
       return '<div class="kb-doc-row">'+
         '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
-        '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(t.table_name)+'</span>'+
-        '<span class="kb-doc-meta">'+escHtml(meta)+' · '+escHtml(t.doc_name||'')+'</span></span>'+dl+
+        '<span class="kb-doc-main"><span class="kb-doc-name" title="'+escHtml(t.doc_name||'')+'">'+escHtml(title)+'</span>'+
+        '<span class="kb-doc-meta">'+escHtml(meta)+'</span></span>'+dl+
         '</div>';
     }).join(''):'<div class="kb-empty-inline">还没有收录表格<br>上传含表格的 Word / PDF / Excel 后会自动识别</div>';
   }catch(e){box.innerHTML='<div class="kb-empty-inline">表格清单加载失败</div>';}
