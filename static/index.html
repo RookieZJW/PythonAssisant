@@ -232,6 +232,16 @@ button{cursor:pointer}
 .msg-row.user .msg-meta{justify-content:flex-end}
 .msg-tokens{opacity:.75}
 
+.kb-table-card{margin-top:9px;max-width:340px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+.kb-table-card-head{display:flex;align-items:center;gap:10px}
+.kb-table-card-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--celadon-line);color:var(--celadon);font-size:18px;flex:none}
+.kb-table-card-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kb-table-card-meta b{font-size:13px;font-weight:600;color:var(--paper);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-table-card-meta small{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-table-card-note{font-size:11px;color:var(--muted);margin:9px 0 10px}
+.kb-table-card-btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 14px;border-radius:8px;background:var(--celadon);color:var(--bg);font-size:12px;font-weight:600;text-decoration:none;border:0}
+.kb-table-card-btn:hover{opacity:.88}
+
 .typing-dots{display:flex;gap:4px;padding:5px 0}
 .typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--celadon);animation:dotBounce 1.3s infinite}
 .typing-dots span:nth-child(2){animation-delay:.18s}
@@ -490,6 +500,9 @@ button{cursor:pointer}
 .kb-doc-main,.kb-share-main{flex:1;min-width:0}
 .kb-doc-name,.kb-share-name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kb-doc-meta,.kb-share-meta{font-size:10px;color:var(--faint);margin-top:2px}
+.kb-sec-badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:9px;background:var(--celadon-line);color:var(--celadon);font-size:10px;text-align:center;margin-left:4px}
+.kb-no-ori{font-size:10px;color:var(--faint);padding:4px 6px}
+.kb-doc-row a.icon-btn{color:var(--celadon);text-decoration:none}
 .kb-empty-inline{
   padding:14px;border:1px dashed var(--line);border-radius:8px;
   text-align:center;color:var(--faint);font-size:11.5px;line-height:1.6;
@@ -840,7 +853,7 @@ button{cursor:pointer}
             <div class="kb-section-head">
               <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-file"/></svg>文档</div>
               <button class="kb-mini-btn kb-owner-only" id="btnKbUpload" title="可一次选择多个文件批量上传" onclick="document.getElementById('kbFileInput').click()"><svg class="ico ico-sm"><use href="#i-upload"/></svg><span id="btnKbUploadLabel">上传文档</span></button>
-              <input type="file" id="kbFileInput" hidden multiple accept=".txt,.md,.pdf,.docx,.doc,.py,.js,.html,.css,.json,.xml,.csv,.log,.java,.c,.cpp,.h" onchange="uploadKbDocument(event)">
+              <input type="file" id="kbFileInput" hidden multiple accept=".txt,.md,.pdf,.docx,.doc,.xlsx,.xlsm,.py,.js,.html,.css,.json,.xml,.csv,.log,.java,.c,.cpp,.h" onchange="uploadKbDocument(event)">
             </div>
             <div class="kb-upload-panel" id="kbUploadPanel" style="display:none" role="status" aria-live="polite">
               <div class="kb-up-top">
@@ -852,6 +865,12 @@ button{cursor:pointer}
               <div class="kb-up-list" id="kbUpList"></div>
             </div>
             <div class="kb-doc-list" id="kbDocList"></div>
+          </div>
+          <div class="kb-section" id="kbTableSection">
+            <div class="kb-section-head">
+              <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-doc"/></svg>已收录表格 <span class="kb-sec-badge" id="kbTableCount">0</span></div>
+            </div>
+            <div class="kb-doc-list" id="kbTableList"></div>
           </div>
           <div class="kb-section kb-owner-only" id="kbShareSection">
             <div class="kb-section-head">
@@ -1096,6 +1115,30 @@ async function renderKbDetail(){
       '<button class="icon-btn danger" title="取消分享" onclick="removeKbShare(\''+s.id+'\')">'+svgUse('x','ico ico-sm')+'</button>'+
       '</div>';
   }).join(''):'<div class="kb-empty-inline">还没有分享给其他用户</div>';
+  loadKbTables(kbModalKbId);
+}
+async function loadKbTables(kbId){
+  const box=document.getElementById('kbTableList');
+  const badge=document.getElementById('kbTableCount');
+  if(!box)return;
+  try{
+    const resp=await api('GET','/kb/'+encodeURIComponent(kbId)+'/tables');
+    if(resp.code!==200)return;
+    const tables=resp.data||[];
+    if(badge)badge.textContent=tables.length;
+    box.innerHTML=tables.length?tables.map(t=>{
+      const quality=Math.round((t.fill_rate||0)*100);
+      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%';
+      const dl=t.can_download
+        ? '<a class="icon-btn" title="下载原文件" href="'+escHtml('/api/v1/kb/'+kbId+'/tables/'+t.id+'/download')+'" download>'+svgUse('export','ico ico-sm')+'</a>'
+        : '<span class="kb-no-ori" title="旧文档未留存原件">无原件</span>';
+      return '<div class="kb-doc-row">'+
+        '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
+        '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(t.table_name)+'</span>'+
+        '<span class="kb-doc-meta">'+escHtml(meta)+' · '+escHtml(t.doc_name||'')+'</span></span>'+dl+
+        '</div>';
+    }).join(''):'<div class="kb-empty-inline">还没有收录表格<br>上传含表格的 Word / PDF / Excel 后会自动识别</div>';
+  }catch(e){box.innerHTML='<div class="kb-empty-inline">表格清单加载失败</div>';}
 }
 async function createKb(){
   const name=document.getElementById('newKbName').value.trim();
@@ -1642,6 +1685,25 @@ function addMsg(role,content,scroll=true,iconOverride=null,createdAt=null){
   return row.querySelector('.msg-bubble');
 }
 
+function appendTableCard(bubble,card){
+  const row=bubble.closest('.msg-row');
+  if(!row)return;
+  const body=row.querySelector('.msg-body');
+  if(!body||body.querySelector('.kb-table-card'))return;
+  const el=document.createElement('div');
+  el.className='kb-table-card';
+  const safeName=escHtml(card.table_name||'表格');
+  const safeDoc=escHtml(card.doc_name||'');
+  el.innerHTML=
+    '<div class="kb-table-card-head"><span class="kb-table-card-ico">▦</span>'+
+    '<div class="kb-table-card-meta"><b>'+safeName+'</b>'+
+    (safeDoc?'<small>来源：'+safeDoc+'</small>':'')+'</div></div>'+
+    '<div class="kb-table-card-note">这是知识库中的原始文件，可直接下载使用</div>'+
+    '<a class="kb-table-card-btn" href="'+escHtml(card.url)+'" download>下载原文件</a>';
+  body.appendChild(el);
+  msgBox.scrollTop=msgBox.scrollHeight;
+}
+
 /* ==================== Chat ==================== */
 async function sendMessage(){
   const message=userInput.value.trim();
@@ -1691,6 +1753,8 @@ async function sendMessage(){
         if(data==='[DONE]'){stopped=true;break readLoop;}
         if(data.startsWith('[ERROR]')){fullText='⚠ '+data.replace(/^\[ERROR\]\s*/,'');stopped=true;break readLoop;}
         try{data=JSON.parse(data);}catch(e){}
+        // 表格命中卡片：只展示知识库里真实存在的原件下载，不拼进正文
+        if(data&&data.__table_card__){appendTableCard(bubble,data.__table_card__);continue;}
         fullText+=data;
         bubble.innerHTML=renderMd(fullText,false);
         msgBox.scrollTop=msgBox.scrollHeight;

@@ -71,6 +71,7 @@ networkx==3.7
 numpy==2.4.6
 onnxruntime==1.32.0
 openai==2.41.1
+openpyxl==3.1.5
 opencv-python==5.1.0.95
 orjson==3.11.9
 ormsgpack==1.12.2

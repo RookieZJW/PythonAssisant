@@ -15,10 +15,11 @@
 import json
 import logging
 import os
+import shutil
 import uuid
-from flask import Blueprint, Response, request, session, stream_with_context
+from flask import Blueprint, Response, request, session, stream_with_context, send_file
 from app.models.user import User
-from app.models.knowledge_base import KnowledgeBase, KBDocument, KBShare
+from app.models.knowledge_base import KnowledgeBase, KBDocument, KBTable, KBShare
 from app.services import kb_service
 from app.utils.response import success, error
 from app.extensions import db
@@ -26,7 +27,7 @@ from app.extensions import db
 kb_bp = Blueprint('knowledge_base', __name__)
 logger = logging.getLogger(__name__)
 
-ALLOWED = {'txt', 'md', 'pdf', 'docx', 'doc', 'py', 'js', 'html', 'css',
+ALLOWED = {'txt', 'md', 'pdf', 'docx', 'doc', 'xlsx', 'xlsm', 'py', 'js', 'html', 'css',
            'json', 'xml', 'csv', 'log', 'java', 'c', 'cpp', 'h'}
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -34,6 +35,51 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_BULK_FILES = 20              # 单次批量上传最多文件数
 MAX_FILE_BYTES = 5 * 1024 * 1024  # 单文件上限 5MB
 MAX_CONTENT_CHARS = 500000        # 单文档正文上限 50 万字
+
+# 原文件留存目录：下载表格时返回上传的原件本身，绝不重新生成
+ORIGINAL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'kb_originals')
+os.makedirs(ORIGINAL_DIR, exist_ok=True)
+
+
+def _retain_original(tmp_path, kb_id, filename):
+    """把上传的原文件复制到留存目录，返回可访问的绝对路径。"""
+    rel_dir = os.path.join(ORIGINAL_DIR, kb_id)
+    os.makedirs(rel_dir, exist_ok=True)
+    dest = os.path.join(rel_dir, '%s_%s' % (uuid.uuid4().hex[:12], filename))
+    shutil.copy2(tmp_path, dest)
+    return dest
+
+
+def _save_tables(kb_id, doc, parsed_tables, original_path):
+    """把抽取出的真实表格写入 kb_tables；返回表格数。"""
+    count = 0
+    for t in parsed_tables:
+        try:
+            row = KBTable(
+                kb_id=kb_id, doc_id=doc.id, doc_name=doc.filename,
+                table_name=t['table_name'], source=t['source'],
+                rows_json=json.dumps(t['rows'], ensure_ascii=False),
+                row_count=t['row_count'], col_count=t['col_count'],
+                fill_rate=t['fill_rate'],
+                original_path=original_path, original_name=doc.filename,
+            )
+            db.session.add(row)
+            count += 1
+        except Exception as e:
+            logger.warning('[KB表格] 保存表格失败 %s: %s', t.get('table_name'), e)
+    if count:
+        db.session.commit()
+    return count
+
+
+def _parse_tables_safe(tmp_path, filename):
+    """抽取表格；失败不影响正文入库，返回空列表。"""
+    try:
+        from app.services import kb_table_service as ts
+        return ts.extract_tables(tmp_path, filename)
+    except Exception as e:
+        logger.warning('[KB表格] 解析失败（不影响正文）%s: %s', filename, e)
+        return []
 
 
 def _sse(payload):
@@ -155,11 +201,16 @@ def upload_document(kb_id):
     if old:
         old.delete_cascade()
 
-    tmp_path = os.path.join(UPLOAD_DIR, ('kb_' + filename))
+    tmp_path = os.path.join(UPLOAD_DIR, ('kb_' + uuid.uuid4().hex[:8] + '_' + filename))
+    original_path = None
+    parsed_tables = []
     try:
         file.save(tmp_path)
         file_size = os.path.getsize(tmp_path)
         content = _parse_file(tmp_path, filename)
+        # 在临时文件删除前：留存原件 + 抽取结构化表格
+        original_path = _retain_original(tmp_path, kb_id, filename)
+        parsed_tables = _parse_tables_safe(tmp_path, filename)
     finally:
         # 临时文件清理失败不能影响已经成功的解析结果
         try:
@@ -170,16 +221,22 @@ def upload_document(kb_id):
 
     if not content or content.startswith('['):
         return error("文档解析失败或内容为空：" + str(content)[:100], 400)
-    if len(content) > 500000:
-        return error("文档内容过长（上限50万字）", 400)
+
+    # 把表格内容以可读文本并入正文，让向量检索也能命中表格里的数据
+    if parsed_tables:
+        from app.services import kb_table_service as ts
+        table_text = ts.tables_to_text(parsed_tables)
+        content = (content + '\n\n' + table_text)[:MAX_CONTENT_CHARS]
 
     doc = KBDocument(kb_id=kb_id, filename=filename, content=content,
-                     size=file_size)
-    # 文件大小需在删除前记录
+                     size=file_size, original_path=original_path,
+                     table_count=len(parsed_tables))
     db.session.add(doc)
     db.session.commit()
+    table_count = _save_tables(kb_id, doc, parsed_tables, original_path)
     count = kb_service.index_document(doc)
-    return success({'id': doc.id, 'filename': filename, 'chunk_count': count}, "文档已加入知识库")
+    return success({'id': doc.id, 'filename': filename, 'chunk_count': count,
+                    'table_count': table_count}, "文档已加入知识库")
 
 
 @kb_bp.route('/kb/<kb_id>/documents/bulk', methods=['POST'])
@@ -247,8 +304,13 @@ def upload_documents_bulk(kb_id):
                             'total': total, 'filename': name,
                             'message': '正在解析「%s」' % name})
                 content, parse_err = '', ''
+                table_data = []       # 本文件的结构化表格
+                original_path = None  # 本文件的留存原件路径
                 try:
                     content = _parse_file(item['path'], name)
+                    # 在临时文件清理前：留存原件 + 抽取表格
+                    original_path = _retain_original(item['path'], kb_id, name)
+                    table_data = _parse_tables_safe(item['path'], name)
                 except Exception as e:
                     logger.exception('[KB批量] 解析异常: %s', name)
                     parse_err = '解析异常：%s' % e
@@ -268,6 +330,11 @@ def upload_documents_bulk(kb_id):
                                 'message': '内容过长（上限 50 万字）'})
                     continue
 
+                # 表格文本并入正文，供向量检索命中
+                if table_data:
+                    from app.services import kb_table_service as ts
+                    content = (content + '\n\n' + ts.tables_to_text(table_data))[:MAX_CONTENT_CHARS]
+
                 # ---- 2. 切块入库（暂不写向量）----
                 yield _sse({'type': 'file', 'stage': 'chunk', 'index': i,
                             'total': total, 'filename': name,
@@ -278,9 +345,12 @@ def upload_documents_bulk(kb_id):
                     if old:
                         old.delete_cascade()
                     doc = KBDocument(kb_id=kb_id, filename=name,
-                                     content=content, size=item['size'])
+                                     content=content, size=item['size'],
+                                     original_path=original_path,
+                                     table_count=len(table_data))
                     db.session.add(doc)
                     db.session.commit()
+                    _save_tables(kb_id, doc, table_data, original_path)
                     count = kb_service.index_document(doc, with_vectors=False)
                 except Exception as e:
                     db.session.rollback()
@@ -361,6 +431,55 @@ def delete_document(kb_id, doc_id):
         return error("文档不存在", 404)
     doc.delete_cascade()
     return success(None, "文档已删除")
+
+
+# ---------- 表格清单与原件下载 ----------
+
+@kb_bp.route('/kb/<kb_id>/tables', methods=['GET'])
+def list_kb_tables(kb_id):
+    """列出知识库里真实抽取到的表格（不含生成内容）。"""
+    _, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.get_visible(kb_id, _uid()):
+        return error("知识库不存在或无访问权限", 404)
+    rows = KBTable.query.filter_by(kb_id=kb_id) \
+        .order_by(KBTable.doc_name, KBTable.created_at).all()
+    return success([r.to_dict() for r in rows])
+
+
+@kb_bp.route('/kb/<kb_id>/tables/<table_id>', methods=['GET'])
+def get_kb_table(kb_id, table_id):
+    """获取单张表格的行列内容（供核对预览）。"""
+    _, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.get_visible(kb_id, _uid()):
+        return error("知识库不存在或无访问权限", 404)
+    row = KBTable.query.filter_by(id=table_id, kb_id=kb_id).first()
+    if not row:
+        return error("表格不存在", 404)
+    return success(row.to_dict(include_rows=True))
+
+
+@kb_bp.route('/kb/<kb_id>/tables/<table_id>/download', methods=['GET'])
+def download_kb_table(kb_id, table_id):
+    """下载表格所在的原始文件。
+
+    铁律：只从留存目录取上传时的原件返回；原件不存在则 404。
+    绝不根据表格数据重新生成文件，避免产出知识库里不存在的表格。
+    """
+    _, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.get_visible(kb_id, _uid()):
+        return error("知识库不存在或无访问权限", 404)
+    row = KBTable.query.filter_by(id=table_id, kb_id=kb_id).first()
+    if not row:
+        return error("表格不存在", 404)
+    path = row.original_path
+    if not path or not os.path.exists(path):
+        # 没有留存原件时明确告知，绝不生成替代文件
+        return error("该表格的原文件不存在（旧版本上传的文档未留存原件），无法下载", 404)
+    download_name = row.original_name or os.path.basename(path)
+    return send_file(path, as_attachment=True, download_name=download_name)
 
 
 # ---------- 分享管理 ----------

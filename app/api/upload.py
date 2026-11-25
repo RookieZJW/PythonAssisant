@@ -25,7 +25,7 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', '..', 'uploads')
 
 # 允许上传的文件扩展名集合
 # 涵盖常见文本文档、代码文件和纯文本格式
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'doc', 'md', 'py', 'js', 'html', 'css', 'json', 'xml', 'csv', 'log', 'java', 'c', 'cpp', 'h'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'doc', 'xlsx', 'xlsm', 'md', 'py', 'js', 'html', 'css', 'json', 'xml', 'csv', 'log', 'java', 'c', 'cpp', 'h'}
 
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -110,6 +110,18 @@ def _parse_file(filepath, filename):
             return '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
         except ImportError:
             return "[错误] 未安装 python-docx，无法解析 Word。请运行 pip install python-docx"
+
+    # ---- Excel：用 openpyxl 读取每个 Sheet 的单元格为文本 ----
+    if ext in ('xlsx', 'xlsm'):
+        try:
+            from app.services import kb_table_service as ts
+            tables = ts.extract_from_xlsx(filepath)
+            return ts.tables_to_text(tables) if tables else ''
+        except ImportError:
+            return "[错误] 未安装 openpyxl，无法解析 Excel。请运行 pip install openpyxl"
+        except Exception as e:
+            logger.exception('[Excel] 解析失败')
+            return '[错误] Excel 解析失败：%s' % e
 
     # ---- 不支持的格式 ----
     return f"[不支持的文件格式] {ext}"

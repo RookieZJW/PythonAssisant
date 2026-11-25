@@ -178,7 +178,42 @@ def chat_stream():
             3. 将完整的用户消息和 AI 回复持久化到数据库
             4. 若为新会话则自动更新标题
         """
+        import json as _json
         try:
+            # 知识库模式：识别"要表格"意图，命中真实表格则直接返回下载卡片，
+            # 未命中则明确说明没有。两种情况都不走大模型，杜绝生成不存在的表格。
+            if mode == 'kb':
+                from app.services import kb_table_service as ts
+                from app.models.knowledge_base import KBTable
+                if ts.wants_table(original_message) and kb_id:
+                    # 知识库权限类错误仍需拦截，仅对"暂无可检索内容"放行
+                    if kb_context_error and '暂无可检索' not in kb_context_error:
+                        yield 'data: [ERROR] ' + kb_context_error + '\n\n'
+                        return
+                    tables = KBTable.query.filter_by(kb_id=kb_id).all()
+                    hit = ts.match_table(original_message, tables)
+                    if hit:
+                        hint = '在知识库中找到表格「%s」（来源：%s），这是上传的原始文件，可直接下载：\n\n' \
+                               % (hit.table_name, hit.doc_name)
+                        for ch in hint:
+                            yield 'data: ' + _json.dumps(ch) + '\n\n'
+                        yield 'data: ' + _json.dumps(ts.table_hit_payload(hit)) + '\n\n'
+                    else:
+                        msg = '知识库中没有找到你需要的表格。我只提供库中已上传的真实文件，不会生成新表格。'
+                        for ch in msg:
+                            yield 'data: ' + _json.dumps(ch) + '\n\n'
+                    # 持久化这条问答，保证历史记录完整
+                    conv_tbl, _, _ = ChatService.prepare_chat_context(
+                        conversation_id, original_message, model_type, None, None,
+                        mode=mode, kb_id=kb_id,
+                    )
+                    Message.create(conv_tbl.id, 'user', original_message)
+                    Message.create(conv_tbl.id, 'assistant',
+                                   ('已返回表格下载链接' if hit else msg))
+                    yield "data: [DONE]\n\n"
+                    return
+
+            # 非"要表格"意图时，知识库错误按原逻辑拦截
             if kb_context_error:
                 yield 'data: [ERROR] ' + kb_context_error + '\n\n'
                 return
@@ -198,7 +233,6 @@ def chat_stream():
             model_client = ModelService.get_model_client(model_type, model_params)
             full_response = ""
 
-            import json as _json
             for chunk in model_client.stream(messages):
                 full_response += chunk
                 # 以 SSE 格式推送每个数据块: "data: <json>\n\n"

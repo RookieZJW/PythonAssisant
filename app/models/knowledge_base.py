@@ -13,6 +13,7 @@
 """
 from app.extensions import db
 from datetime import datetime
+import os
 import uuid
 
 
@@ -98,6 +99,7 @@ class KnowledgeBase(db.Model):
         except Exception:
             pass
         KBChunk.query.filter_by(kb_id=self.id).delete()
+        KBTable.query.filter_by(kb_id=self.id).delete()
         KBDocument.query.filter_by(kb_id=self.id).delete()
         KBShare.query.filter_by(kb_id=self.id).delete()
         db.session.delete(self)
@@ -116,6 +118,9 @@ class KBDocument(db.Model):
     content = db.Column(db.Text(length=16777215), nullable=False)
     size = db.Column(db.Integer, default=0)
     chunk_count = db.Column(db.Integer, default=0)
+    # 原文件留存路径：下载表格时返回上传的原件本身，绝不重新生成
+    original_path = db.Column(db.String(512), nullable=True, default=None)
+    table_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -126,6 +131,8 @@ class KBDocument(db.Model):
             'size': self.size,
             'content_preview': self.content[:200] if self.content else '',
             'chunk_count': self.chunk_count,
+            'table_count': self.table_count or 0,
+            'has_original': bool(self.original_path and os.path.exists(self.original_path)),
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -136,6 +143,7 @@ class KBDocument(db.Model):
         except Exception:
             pass
         KBChunk.query.filter_by(doc_id=self.id).delete()
+        KBTable.query.filter_by(doc_id=self.id).delete()
         db.session.delete(self)
         db.session.commit()
 
@@ -152,6 +160,60 @@ class KBChunk(db.Model):
     content = db.Column(db.Text, nullable=False)
     position = db.Column(db.Integer, default=0)  # 块在文档中的顺序
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class KBTable(db.Model):
+    """从文档中真实抽取的表格（不生成、不推测）。
+
+    每行对应一张表格，rows_json 保存原始行列数据；
+    original_path 指向上传的原始文件，下载时返回该文件本身。
+    """
+    __tablename__ = 'kb_tables'
+    __table_args__ = {'mysql_charset': 'utf8mb4', 'mysql_collate': 'utf8mb4_unicode_ci'}
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kb_id = db.Column(db.String(36), nullable=False, index=True)
+    doc_id = db.Column(db.String(36), nullable=False, index=True)
+    doc_name = db.Column(db.String(255), default='')
+    table_name = db.Column(db.String(255), nullable=False)
+    source = db.Column(db.String(255), default='')          # 页码 / Sheet 名
+    rows_json = db.Column(db.Text(length=16777215), default='[]')  # 原始行列
+    row_count = db.Column(db.Integer, default=0)
+    col_count = db.Column(db.Integer, default=0)
+    fill_rate = db.Column(db.Float, default=0.0)            # 解析质量参考
+    original_path = db.Column(db.String(512), nullable=True, default=None)
+    original_name = db.Column(db.String(255), default='')   # 原文件名（下载用）
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def rows(self):
+        import json
+        try:
+            return json.loads(self.rows_json or '[]')
+        except Exception:
+            return []
+
+    def to_dict(self, include_rows=False):
+        d = {
+            'id': self.id,
+            'kb_id': self.kb_id,
+            'doc_id': self.doc_id,
+            'doc_name': self.doc_name,
+            'table_name': self.table_name,
+            'source': self.source,
+            'row_count': self.row_count,
+            'col_count': self.col_count,
+            'fill_rate': self.fill_rate,
+            'original_name': self.original_name,
+            'can_download': bool(self.original_path and os.path.exists(self.original_path)),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+        if include_rows:
+            d['rows'] = self.rows()
+        return d
+
+    def delete_cascade(self):
+        db.session.delete(self)
+        db.session.commit()
 
 
 class KBShare(db.Model):

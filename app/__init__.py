@@ -106,7 +106,7 @@ def create_app(config_name=None):
         CORS(app)
 
     # 4. 提前导入所有模型，确保 SQLAlchemy 的 create_all 能发现它们
-    from .models import User, Conversation, Message, Role, KnowledgeBase, KBDocument, KBChunk, KBShare  # noqa
+    from .models import User, Conversation, Message, Role, KnowledgeBase, KBDocument, KBChunk, KBTable, KBShare  # noqa
 
     # 5. 初始化扩展（包括数据库连接、建表等）
     init_extensions(app)

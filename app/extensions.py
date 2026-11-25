@@ -51,6 +51,7 @@ def init_extensions(app):
         db.create_all()
         _ensure_conversation_mode_columns()
         _ensure_kb_content_column()
+        _ensure_kb_document_original_columns()
 
     # ---- 步骤4: 注册 SocketIO 事件 ----
     # 从 voice.py 导入事件注册函数, 让它能处理 /tts 相关的 WebSocket 消息
@@ -112,6 +113,31 @@ def _ensure_kb_content_column():
         print("[DB] kb_documents.content 已升级为 MEDIUMTEXT")
     except Exception as e:
         print(f"[DB] 知识库正文列类型迁移失败：{e}")
+
+
+def _ensure_kb_document_original_columns():
+    """
+    轻量迁移：给已有 kb_documents 表补上 original_path / table_count 字段。
+    用于原文件留存与表格数量记录（db.create_all 不会修改已存在的表）。
+    """
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(db.engine)
+        if 'kb_documents' not in inspector.get_table_names():
+            return
+        columns = {c['name'] for c in inspector.get_columns('kb_documents')}
+        with db.engine.begin() as conn:
+            if 'original_path' not in columns:
+                conn.execute(text(
+                    "ALTER TABLE kb_documents ADD COLUMN original_path VARCHAR(512) NULL"
+                ))
+            if 'table_count' not in columns:
+                conn.execute(text(
+                    "ALTER TABLE kb_documents ADD COLUMN table_count INT DEFAULT 0"
+                ))
+        print("[DB] kb_documents.original_path / table_count 已就绪")
+    except Exception as e:
+        print(f"[DB] 原文件字段迁移失败：{e}")
 
 
 def _ensure_database_exists(db_uri):

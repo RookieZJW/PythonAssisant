@@ -22,6 +22,9 @@ logs/
 # 上传临时文件
 uploads/
 
+# 知识库原文件留存（用户数据，绝不入库）
+kb_originals/
+
 # 运行时生成
 .pytest_cache/
 .coverage

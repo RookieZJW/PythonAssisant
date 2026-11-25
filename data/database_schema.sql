@@ -42,9 +42,30 @@ CREATE TABLE `kb_documents` (
   `content` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `size` int DEFAULT 0,
   `chunk_count` int DEFAULT 0,
+  `original_path` varchar(512) DEFAULT NULL,
+  `table_count` int DEFAULT 0,
   `created_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_kb_documents_kb` (`kb_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+DROP TABLE IF EXISTS `kb_tables`;
+CREATE TABLE `kb_tables` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `doc_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `doc_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `table_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `rows_json` mediumtext COLLATE utf8mb4_unicode_ci DEFAULT '[]',
+  `row_count` int DEFAULT 0,
+  `col_count` int DEFAULT 0,
+  `fill_rate` float DEFAULT 0,
+  `original_path` varchar(512) DEFAULT NULL,
+  `original_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_tables_kb` (`kb_id`),
+  KEY `ix_kb_tables_doc` (`doc_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `kb_shares`;
 CREATE TABLE `kb_shares` (
