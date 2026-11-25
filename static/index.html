@@ -6,6 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="theme-color" content="#12171D">
 <title>AI Assistant</title>
+<link rel="icon" href="data:,">
 <script>
 (function(){var t=localStorage.getItem('assistantTheme');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);})();
 </script>
@@ -878,10 +879,10 @@ button{cursor:pointer}
 </div>
 <div class="kb-toast" id="kbToast" role="status" aria-live="polite"></div>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="/static/vendor/socket.io.min.js"></script>
+<link rel="stylesheet" href="/static/vendor/atom-one-dark.min.css">
+<script src="/static/vendor/highlight.min.js"></script>
+<script src="/static/vendor/marked.min.js"></script>
 
 <script>
 /* ==================== Theme ==================== */
@@ -1560,7 +1561,8 @@ function exportConversation(){
   const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=title.replace(/[^a-zA-Z0-9一-鿿\s\-_]/g,'').trim().slice(0,30)+'.md';a.click();
-  URL.revokeObjectURL(url);
+  // 立刻撤销会让浏览器来不及读取 blob，报 ERR_FILE_NOT_FOUND；延迟释放
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function deleteConversation(convId){
   if(!confirm('确定删除这条对话记录？'))return;
@@ -1734,6 +1736,7 @@ const autoSpeakCb=document.getElementById('autoSpeak');
 let recognition=null,isListening=false,isSpeaking=false,currentTtsVoice='xiaoxiao',lastAssistantText='',socket=null;
 
 function connectSocket(){
+  if(typeof io==='undefined')return;   // 语音实时通道不可用时不阻塞页面
   try{
     socket=io({transports:['websocket','polling']});
     socket.on('tts_error',data=>console.error('[WS] tts error:',data.message));
@@ -1951,8 +1954,10 @@ async function init(){
   if(firstAvatar)firstAvatar.textContent=getAssistantIcon();
   updateRoleButtons();loadTokenStats();connectSocket();
 }
+let bootWaits=0;
 function boot(){
-  if(typeof marked==='undefined'){setTimeout(boot,200);return;}
+  // 最多等 8 秒；即使资源加载失败也要初始化页面（Markdown 会自动降级为纯文本）
+  if(typeof marked==='undefined'&&bootWaits++<40){setTimeout(boot,200);return;}
   if(typeof hljs!=='undefined')hljs.configure({languages:[]});
   init();
 }
