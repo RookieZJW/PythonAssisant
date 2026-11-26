@@ -57,6 +57,7 @@ CREATE TABLE `kb_tables` (
   `table_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `source` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `rows_json` mediumtext COLLATE utf8mb4_unicode_ci DEFAULT '[]',
+  `merges_json` mediumtext COLLATE utf8mb4_unicode_ci DEFAULT '[]',
   `row_count` int DEFAULT 0,
   `col_count` int DEFAULT 0,
   `fill_rate` float DEFAULT 0,

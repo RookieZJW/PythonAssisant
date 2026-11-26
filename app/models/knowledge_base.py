@@ -178,6 +178,7 @@ class KBTable(db.Model):
     table_name = db.Column(db.String(255), nullable=False)
     source = db.Column(db.String(255), default='')          # 页码 / Sheet 名
     rows_json = db.Column(db.Text(length=16777215), default='[]')  # 原始行列
+    merges_json = db.Column(db.Text(length=16777215), default='[]')  # 合并单元格信息
     row_count = db.Column(db.Integer, default=0)
     col_count = db.Column(db.Integer, default=0)
     fill_rate = db.Column(db.Float, default=0.0)            # 解析质量参考
@@ -189,6 +190,13 @@ class KBTable(db.Model):
         import json
         try:
             return json.loads(self.rows_json or '[]')
+        except Exception:
+            return []
+
+    def merges(self):
+        import json
+        try:
+            return json.loads(getattr(self, 'merges_json', None) or '[]')
         except Exception:
             return []
 
@@ -209,6 +217,7 @@ class KBTable(db.Model):
         }
         if include_rows:
             d['rows'] = self.rows()
+            d['merges'] = self.merges()
         return d
 
     def delete_cascade(self):

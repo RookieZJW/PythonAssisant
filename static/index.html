@@ -505,6 +505,23 @@ button{cursor:pointer}
 .kb-sec-badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:9px;background:var(--celadon-line);color:var(--celadon);font-size:10px;text-align:center;margin-left:4px}
 .kb-no-ori{font-size:10px;color:var(--faint);padding:4px 6px}
 .kb-doc-row a.icon-btn{color:var(--celadon);text-decoration:none}
+.kb-doc-row.kb-clickable{cursor:pointer;transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.kb-doc-row.kb-clickable:hover{border-color:var(--celadon-line);background:var(--surface)}
+.kb-doc-row.kb-clickable .kb-doc-name:hover{color:var(--celadon)}
+
+/* ---- 表格内容预览弹窗 ---- */
+.kb-preview-modal{max-width:min(920px,94vw);width:100%;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.kb-preview-head{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 14px;border-bottom:1px solid var(--line);flex:none}
+.kb-preview-head-main{flex:1;min-width:0}
+.kb-preview-title{font-size:14px;font-weight:650;color:var(--paper);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-preview-meta{font-size:11px;color:var(--faint);margin-top:4px}
+.kb-preview-body{padding:14px 20px;overflow:auto;max-height:60vh;flex:1}
+.kb-preview-table{border-collapse:collapse;width:100%;font-size:12px;color:var(--paper)}
+.kb-preview-table th,.kb-preview-table td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;word-break:break-word;max-width:320px;line-height:1.5}
+.kb-preview-table th{background:var(--surface);color:var(--celadon);font-weight:600;position:sticky;top:0}
+.kb-preview-table td[rowspan],.kb-preview-table td[colspan]{vertical-align:middle;text-align:center;font-weight:500}
+.kb-preview-table tr:nth-child(even) td{background:var(--panel-2)}
+.kb-preview-foot{display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid var(--line);flex:none}
 .kb-empty-inline{
   padding:14px;border:1px dashed var(--line);border-radius:8px;
   text-align:center;color:var(--faint);font-size:11.5px;line-height:1.6;
@@ -900,6 +917,24 @@ button{cursor:pointer}
 </div>
 <div class="kb-toast" id="kbToast" role="status" aria-live="polite"></div>
 
+<div class="modal-overlay" id="tablePreviewModal" style="display:none">
+  <div class="modal kb-preview-modal" role="dialog" aria-label="表格内容预览">
+    <div class="kb-preview-head">
+      <span class="kb-table-card-ico">▦</span>
+      <div class="kb-preview-head-main">
+        <div class="kb-preview-title" id="tpTitle">表格预览</div>
+        <div class="kb-preview-meta" id="tpMeta"></div>
+      </div>
+      <button class="icon-btn" onclick="closeTablePreview()" aria-label="关闭预览"><svg class="ico"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="kb-preview-body" id="tpBody"></div>
+    <div class="kb-preview-foot">
+      <button class="btn" onclick="closeTablePreview()">关闭</button>
+      <a class="btn btn-primary" id="tpDownload" href="#" download style="text-decoration:none">下载原文件</a>
+    </div>
+  </div>
+</div>
+
 <script src="/static/vendor/socket.io.min.js"></script>
 <link rel="stylesheet" href="/static/vendor/atom-one-dark.min.css">
 <script src="/static/vendor/highlight.min.js"></script>
@@ -1053,6 +1088,8 @@ function openKbModal(){
 }
 function closeKbModal(){document.getElementById('kbModal').style.display='none';}
 document.getElementById('kbModal').addEventListener('click',function(e){if(e.target===this)closeKbModal();});
+document.getElementById('tablePreviewModal').addEventListener('click',function(e){if(e.target===this)closeTablePreview();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeTablePreview();});
 function renderKbList(){
   const list=document.getElementById('kbList');
   list.innerHTML='';
@@ -1130,22 +1167,94 @@ async function loadKbTables(kbId){
     if(badge)badge.textContent=tables.length;
     box.innerHTML=tables.length?tables.map(t=>{
       const quality=Math.round((t.fill_rate||0)*100);
-      // 默认名"表格 1"不直观时，用文档名作为主标题
+      // 标题必须带来源文档，避免用户只看到"第27页-表格2"却不知道出自哪个文件
       const isDefault=/^表格\s*\d+$/.test(t.table_name||'');
-      const docBase=(t.doc_name||'').replace(/\.[^.]+$/,'');
-      const title=isDefault&&docBase?docBase:(t.table_name||'表格');
-      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%'+
-        (isDefault&&docBase?(' · '+(t.table_name)):'');
+      const docBase=(t.doc_name||'').replace(/\.[^.]+$/,'').trim();
+      const loc=t.table_name||'表格';
+      const title=docBase?(docBase+' · '+loc):loc;
+      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%';
+      const dlUrl='/api/v1/kb/'+kbId+'/tables/'+t.id+'/download'+
+        (t.doc_name?('?doc='+encodeURIComponent(t.doc_name)):'');
+      const dlName=dlFileName(t.original_name||t.doc_name,'表格原文件');
       const dl=t.can_download
-        ? '<a class="icon-btn" title="下载原文件" href="'+escHtml('/api/v1/kb/'+kbId+'/tables/'+t.id+'/download')+'" download>'+svgUse('export','ico ico-sm')+'</a>'
+        ? '<a class="icon-btn" title="下载原文件" href="'+escHtml(dlUrl)+'" download="'+escHtml(dlName)+'" onclick="event.stopPropagation()">'+svgUse('export','ico ico-sm')+'</a>'
         : '<span class="kb-no-ori" title="旧文档未留存原件">无原件</span>';
-      return '<div class="kb-doc-row">'+
+      return '<div class="kb-doc-row kb-clickable" data-tid="'+escHtml(t.id)+'" onclick="openTablePreview(\''+escHtml(t.id)+'\')" title="点击预览表格内容">'+
         '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
         '<span class="kb-doc-main"><span class="kb-doc-name" title="'+escHtml(t.doc_name||'')+'">'+escHtml(title)+'</span>'+
         '<span class="kb-doc-meta">'+escHtml(meta)+'</span></span>'+dl+
         '</div>';
     }).join(''):'<div class="kb-empty-inline">还没有收录表格<br>上传含表格的 Word / PDF / Excel 后会自动识别</div>';
   }catch(e){box.innerHTML='<div class="kb-empty-inline">表格清单加载失败</div>';}
+}
+
+/* ---- 表格内容预览（只读真实 rows，不生成任何内容） ---- */
+async function openTablePreview(tid){
+  const modal=document.getElementById('tablePreviewModal');
+  const body=document.getElementById('tpBody');
+  const title=document.getElementById('tpTitle');
+  const meta=document.getElementById('tpMeta');
+  const dl=document.getElementById('tpDownload');
+  if(!modal)return;
+  modal.style.display='flex';
+  title.textContent='表格预览';
+  meta.textContent='正在读取表格内容…';
+  body.innerHTML='<div class="kb-empty-inline">加载中…</div>';
+  dl.style.display='none';
+  const kbId=kbModalKbId||currentKbId||'';
+  try{
+    const resp=await api('GET','/kb/'+encodeURIComponent(kbId)+'/tables/'+encodeURIComponent(tid));
+    if(resp.code!==200){body.innerHTML='<div class="kb-empty-inline">'+(resp.message||'读取失败')+'</div>';return;}
+    const t=resp.data||{};
+    const rows=t.rows||[];
+    const isDefault=/^表格\s*\d+$/.test(t.table_name||'');
+    const docBase=(t.doc_name||'').replace(/\.[^.]+$/,'').trim();
+    const loc=t.table_name||'表格';
+    title.textContent=docBase?(docBase+' · '+loc):loc;
+    meta.textContent=(t.doc_name||'')+' · '+(t.row_count||rows.length)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+Math.round((t.fill_rate||0)*100)+'% · 来源：'+(t.source||'—');
+    if(!rows.length){body.innerHTML='<div class="kb-empty-inline">该表格没有可预览的行数据</div>';return;}
+    // 用真实抽取的单元格渲染表格，仅做 HTML 转义，不补全、不生成。
+    // merges 描述原文件中的合并单元格（row/col/rowspan/colspan），渲染成 rowspan/colspan。
+    const merges=t.merges||[];
+    const spanAt={}; // "r,c" -> {rs,cs}
+    merges.forEach(m=>{
+      const rs=Math.max(1,m.rowspan|0),cs=Math.max(1,m.colspan|0);
+      if(rs>1||cs>1)spanAt[m.row+','+m.col]={rs,cs};
+    });
+    const skip={}; // 被合并格覆盖的位置不再单独输出
+    Object.keys(spanAt).forEach(k=>{
+      const [r,c]=k.split(',').map(Number),s=spanAt[k];
+      for(let rr=r;rr<r+s.rs;rr++)for(let cc=c;cc<c+s.cs;cc++){
+        if(rr!==r||cc!==c)skip[rr+','+cc]=1;
+      }
+    });
+    let html='<table class="kb-preview-table"><tbody>';
+    for(let r=0;r<rows.length;r++){
+      const row=rows[r]||[];
+      let cells='';
+      for(let c=0;c<row.length;c++){
+        if(skip[r+','+c])continue;
+        const s=spanAt[r+','+c];
+        const attrs=(s?(' rowspan="'+s.rs+'"'+(s.cs>1?(' colspan="'+s.cs+'"'):'')):'');
+        const text=(row[c]==null?'':String(row[c]));
+        cells+='<td'+attrs+'>'+escHtml(text)+'</td>';
+      }
+      html+='<tr>'+cells+'</tr>';
+    }
+    html+='</tbody></table>';
+    body.innerHTML=html;
+    body.scrollTop=0;
+    if(t.can_download){
+      const url='/api/v1/kb/'+kbId+'/tables/'+tid+'/download'+(t.doc_name?('?doc='+encodeURIComponent(t.doc_name)):'');
+      dl.href=url;
+      dl.setAttribute('download',dlFileName(t.original_name||t.doc_name,'表格原文件'));
+      dl.style.display='';
+    }
+  }catch(e){body.innerHTML='<div class="kb-empty-inline">读取失败：'+(e.message||'未知错误')+'</div>';}
+}
+function closeTablePreview(){
+  const modal=document.getElementById('tablePreviewModal');
+  if(modal)modal.style.display='none';
 }
 async function createKb(){
   const name=document.getElementById('newKbName').value.trim();
@@ -1551,6 +1660,12 @@ function estimateTokens(text){
   return Math.max(1,Math.round(t));
 }
 function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+// 下载时显式指定文件名：避免 Edge/Chrome 把带查询串的 URL 当成文件名而存成怪文件
+function dlFileName(name,fallback){
+  let n=String(name||fallback||'表格原文件');
+  n=n.replace(/[\\/:*?"<>|]/g,'_').trim();   // Windows 文件名非法字符
+  return n||(fallback||'表格原文件');
+}
 async function switchConversation(convId){
   const conv=conversations.find(c=>c.id===convId);
   const convMode=(conv&&conv.mode)||currentMode;
@@ -1713,12 +1828,18 @@ function appendTableCard(bubble,card){
   el.className='kb-table-card';
   const safeName=escHtml(card.table_name||'表格');
   const safeDoc=escHtml(card.doc_name||'');
+  // 旧卡片存的 URL 没有 doc 参数：文档重新上传后表格 id 会变，
+  // 这里按文档名补上 doc 参数，后端即可回退到最新原件，避免下载 404。
+  let dlUrl=card.url||'';
+  if(card.doc_name&&dlUrl&&dlUrl.indexOf('doc=')<0){
+    dlUrl+=(dlUrl.indexOf('?')>=0?'&':'?')+'doc='+encodeURIComponent(card.doc_name);
+  }
   el.innerHTML=
     '<div class="kb-table-card-head"><span class="kb-table-card-ico">▦</span>'+
     '<div class="kb-table-card-meta"><b>'+safeName+'</b>'+
     (safeDoc?'<small>来源：'+safeDoc+'</small>':'')+'</div></div>'+
     '<div class="kb-table-card-note">这是知识库中的原始文件，可直接下载使用</div>'+
-    '<a class="kb-table-card-btn" href="'+escHtml(card.url)+'" download>下载原文件</a>';
+    '<a class="kb-table-card-btn" href="'+escHtml(dlUrl)+'" download="'+escHtml(dlFileName(card.doc_name,'表格原文件'))+'">下载原文件</a>';
   body.appendChild(el);
   msgBox.scrollTop=msgBox.scrollHeight;
 }

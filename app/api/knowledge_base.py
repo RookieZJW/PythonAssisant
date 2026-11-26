@@ -59,6 +59,7 @@ def _save_tables(kb_id, doc, parsed_tables, original_path):
                 kb_id=kb_id, doc_id=doc.id, doc_name=doc.filename,
                 table_name=t['table_name'], source=t['source'],
                 rows_json=json.dumps(t['rows'], ensure_ascii=False),
+                merges_json=json.dumps(t.get('merges', []), ensure_ascii=False),
                 row_count=t['row_count'], col_count=t['col_count'],
                 fill_rate=t['fill_rate'],
                 original_path=original_path, original_name=doc.filename,
@@ -472,8 +473,18 @@ def download_kb_table(kb_id, table_id):
     if not KnowledgeBase.get_visible(kb_id, _uid()):
         return error("知识库不存在或无访问权限", 404)
     row = KBTable.query.filter_by(id=table_id, kb_id=kb_id).first()
+    # 旧卡片/旧页面可能存着已删除的表格 id（文档重新上传后旧记录被清理）。
+    # 用卡片携带的文档名回退到当前同名文档的最新表格，让下载不再失效。
+    # 铁律不变：只返回真实存在的原件，绝不生成文件。
     if not row:
-        return error("表格不存在", 404)
+        doc_hint = (request.args.get('doc') or '').strip()
+        if doc_hint:
+            row = KBTable.query.filter(
+                KBTable.kb_id == kb_id,
+                KBTable.doc_name == doc_hint,
+            ).order_by(KBTable.created_at.desc()).first()
+    if not row:
+        return error("表格不存在或已被更新，请重新上传文档后再下载", 404)
     path = row.original_path
     if not path or not os.path.exists(path):
         # 没有留存原件时明确告知，绝不生成替代文件

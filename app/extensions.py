@@ -52,6 +52,7 @@ def init_extensions(app):
         _ensure_conversation_mode_columns()
         _ensure_kb_content_column()
         _ensure_kb_document_original_columns()
+        _ensure_kb_table_merges_column()
 
     # ---- 步骤4: 注册 SocketIO 事件 ----
     # 从 voice.py 导入事件注册函数, 让它能处理 /tts 相关的 WebSocket 消息
@@ -138,6 +139,24 @@ def _ensure_kb_document_original_columns():
         print("[DB] kb_documents.original_path / table_count 已就绪")
     except Exception as e:
         print(f"[DB] 原文件字段迁移失败：{e}")
+
+
+def _ensure_kb_table_merges_column():
+    """轻量迁移：给 kb_tables 补 merges_json 字段（保存合并单元格信息）。"""
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(db.engine)
+        if 'kb_tables' not in inspector.get_table_names():
+            return
+        columns = {c['name'] for c in inspector.get_columns('kb_tables')}
+        if 'merges_json' not in columns:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE kb_tables ADD COLUMN merges_json MEDIUMTEXT NULL"
+                ))
+            print("[DB] kb_tables.merges_json 已就绪")
+    except Exception as e:
+        print(f"[DB] 表格合并字段迁移失败：{e}")
 
 
 def _ensure_database_exists(db_uri):
