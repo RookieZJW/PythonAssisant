@@ -11,6 +11,7 @@
 """
 import logging
 import os
+import re
 from flask import Blueprint, request
 from werkzeug.utils import secure_filename
 from app.utils.response import success, error
@@ -46,6 +47,63 @@ def _allowed_file(filename):
         True 如果文件类型被允许，否则 False
     """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+_SENTENCE_END = '。！？；：!?;:）)]】》」”\'"'
+
+
+# PDF 页标记：切块器据此记录每个文本块来自第几页，用于把表格按文档顺序归位。
+# 用特殊标记而非普通文字，且放在页面文本开头，切块时会剥离不进入正文。
+PAGE_MARK = '[[PDF_PAGE:%d]]'
+
+
+def _join_pages(page_texts):
+    """智能拼接 PDF 各页文本，修复跨页段落被强行断开的问题。
+
+    规则：
+      - 去除每页页眉/页脚（页码等重复行）；
+      - 每页前插入 [[PDF_PAGE:N]] 标记，切块器据此记录文本块页码；
+      - 上一页末尾不是完整句（无句号等终止标点）→ 与下一页直接连接（同一段）；
+      - 否则用双换行分段。
+    """
+    if not page_texts:
+        return ''
+    cleaned = []
+    for page_no, raw in enumerate(page_texts, start=1):
+        lines = [ln.rstrip() for ln in (raw or '').splitlines()]
+        # 去掉纯页码行（如 "第 3 页 共 57 页"、"3 / 57"）
+        lines = [ln for ln in lines
+                 if not re_page_number(ln.strip())]
+        t = '\n'.join(ln for ln in lines if ln.strip()).strip()
+        if t:
+            cleaned.append(PAGE_MARK % page_no + '\n' + t)
+    if not cleaned:
+        return ''
+    result = cleaned[0]
+    for nxt in cleaned[1:]:
+        # 每页文本以页标记开头，必须独立成行（否则页标记会粘进上一页正文）。
+        # 把标记和该页正文拆开：标记前强制换行，正文按跨页规则决定接续。
+        mark, _, body = nxt.partition('\n')
+        prev_tail = result.rstrip()
+        # 上一页以完整句结尾 → 分段；否则视为跨页段落，直接续接正文
+        if prev_tail and prev_tail[-1] in _SENTENCE_END:
+            result += '\n\n' + mark + '\n' + body
+        else:
+            result += '\n' + mark + '\n' + body
+    return result
+
+
+def re_page_number(line):
+    """判断是否为纯页码/页眉页脚行"""
+    if not line or len(line) > 24:
+        return False
+    pats = [
+        r'^第\s*\d+\s*页(\s*共\s*\d+\s*页)?$',
+        r'^\d+\s*/\s*\d+$',
+        r'^-\s*\d+\s*-$',
+        r'^Page\s+\d+(\s+of\s+\d+)?$',
+    ]
+    return any(re.match(p, line, re.I) for p in pats)
 
 
 def _parse_file(filepath, filename):
@@ -84,7 +142,9 @@ def _parse_file(filepath, filename):
                 t = page.extract_text()
                 if t:
                     text.append(t)
-            content = '\n\n'.join(text)
+            # 跨页段落重连：页间只用单换行，让切块器按句子/段落判断，
+            # 不再用双换行强行断开（双换行会被当成段落边界，把跨页段落劈成两块）。
+            content = _join_pages(text)
         except ImportError:
             logger.warning('[PDF] 未安装 PyPDF2，直接尝试 OCR')
         except Exception as e:
@@ -106,8 +166,9 @@ def _parse_file(filepath, filename):
         try:
             from docx import Document
             doc = Document(filepath)
-            # 提取所有非空段落文本
-            return '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
+            # 段落之间用双换行：与切块器"空行=段落边界"的约定一致，
+            # 否则整篇文档会被当成一个段落按字符硬切。
+            return '\n\n'.join(p.text.strip() for p in doc.paragraphs if p.text.strip())
         except ImportError:
             return "[错误] 未安装 python-docx，无法解析 Word。请运行 pip install python-docx"
 

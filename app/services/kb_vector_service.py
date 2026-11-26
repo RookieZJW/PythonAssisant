@@ -13,6 +13,7 @@ Milvus collection 设计：
 import re
 import hashlib
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -24,24 +25,42 @@ EMBED_BATCH = 10   # DashScope text-embedding-v3 单次最多 10 条
 MAX_QUERY_LIMIT = 16384  # Milvus query 的 offset+limit 上限
 
 _client = None
-_client_failed = False
+_last_client_attempt = 0.0
+CLIENT_RETRY_INTERVAL = 5.0  # 连接失败后最快 5 秒重试，不再"一次失败终身降级"
 
 
 def get_client():
-    """获取 Milvus 客户端（单例），连接失败返回 None"""
-    global _client, _client_failed
+    """获取 Milvus 客户端（单例缓存 + 失败后节流重试）
+
+    服务可能早于 Milvus（WSL）启动，此时首次连接必然失败。旧实现会把
+    _client_failed 永久置 True，导致 Milvus 起来后仍一直走关键词检索。
+    这里改为带节流间隔的自动重试，Milvus 就绪后即可自行恢复。
+    """
+    global _client, _last_client_attempt
     if _client is not None:
         return _client
-    if _client_failed:
+    now = time.monotonic()
+    if now - _last_client_attempt < CLIENT_RETRY_INTERVAL:
         return None
+    _last_client_attempt = now
     try:
         from pymilvus import MilvusClient
         _client = MilvusClient(uri=MILVUS_URI)
+        logger.info('[KB向量] Milvus 客户端已就绪')
         return _client
     except Exception as e:
-        logger.warning('[KB向量] Milvus 连接失败: %s', e)
-        _client_failed = True
+        logger.warning('[KB向量] Milvus 连接失败（%.0f 秒后重试）: %s',
+                       CLIENT_RETRY_INTERVAL, e)
         return None
+
+
+def _reset_client():
+    """操作异常时丢弃缓存的客户端，使下一次调用能重建连接。"""
+    global _client, _last_client_attempt
+    if _client is not None:
+        logger.warning('[KB向量] 丢弃失效的 Milvus 客户端，将在下次调用时重连')
+    _client = None
+    _last_client_attempt = 0.0
 
 
 def collection_name(kb_id):
@@ -105,6 +124,7 @@ def ensure_collection(kb_id):
         return name
     except Exception as e:
         logger.warning('[KB向量] 创建集合失败: %s', e)
+        _reset_client()
         return None
 
 
@@ -137,6 +157,7 @@ def index_chunks(kb_id, chunks):
         return True
     except Exception as e:
         logger.warning('[KB向量] 写入失败: %s', e)
+        _reset_client()
         return False
 
 
@@ -155,6 +176,7 @@ def delete_document_vectors(kb_id, doc_id):
             logger.info('[KB向量] 已删除文档 %s 的 %d 条向量', doc_id, len(rows))
     except Exception as e:
         logger.warning('[KB向量] 删除文档向量失败: %s', e)
+        _reset_client()
 
 
 def delete_kb_collection(kb_id):
@@ -169,6 +191,7 @@ def delete_kb_collection(kb_id):
             logger.info('[KB向量] 已删除集合 %s', name)
     except Exception as e:
         logger.warning('[KB向量] 删除集合失败: %s', e)
+        _reset_client()
 
 
 def search(kb_id, query, top_k=TOP_K):
@@ -198,6 +221,7 @@ def search(kb_id, query, top_k=TOP_K):
         return results
     except Exception as e:
         logger.warning('[KB向量] 检索失败: %s', e)
+        _reset_client()
         return None
 
 
@@ -272,5 +296,6 @@ def iter_rebuild_index(kb_id, batch_size=EMBED_BATCH):
         yield ('stored', total, total, None)
     except Exception as e:
         logger.warning('[KB向量] 重建写入失败: %s', e)
+        _reset_client()
         yield ('error', 0, total, str(e))
 

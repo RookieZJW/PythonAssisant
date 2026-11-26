@@ -159,6 +159,9 @@ class KBChunk(db.Model):
     doc_name = db.Column(db.String(255), default='')
     content = db.Column(db.Text, nullable=False)
     position = db.Column(db.Integer, default=0)  # 块在文档中的顺序
+    # 章节路径（如 "第二章 危险废物管理 > 2.1 分类存放"）：
+    # 命中细块后按此路径聚合整节返回，保证回答完整
+    section_path = db.Column(db.String(500), default='', index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -260,3 +263,107 @@ class KBShare(db.Model):
             'nickname': user.nickname if user else '',
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class KBStaging(db.Model):
+    """待审核文档：上传解析后先落到这里，审核通过才进入正式知识库。
+
+    审核前：数据对检索完全不可见（kb_documents / kb_chunks / kb_tables 均无记录）。
+    审核后：由 approve() 把切片写入正式表并触发向量化，然后删除待审核记录。
+    """
+    __tablename__ = 'kb_staging'
+    __table_args__ = {'mysql_charset': 'utf8mb4', 'mysql_collate': 'utf8mb4_unicode_ci'}
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kb_id = db.Column(db.String(36), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    size = db.Column(db.Integer, default=0)
+    original_path = db.Column(db.String(512), nullable=True, default=None)
+    chunk_count = db.Column(db.Integer, default=0)
+    table_count = db.Column(db.Integer, default=0)
+    uploaded_by = db.Column(db.String(64), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'kb_id': self.kb_id,
+            'filename': self.filename,
+            'size': self.size,
+            'chunk_count': self.chunk_count,
+            'table_count': self.table_count or 0,
+            'has_original': bool(self.original_path and os.path.exists(self.original_path)),
+            'uploaded_by': self.uploaded_by or '',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def chunks(self):
+        return KBStagingChunk.query.filter_by(staging_id=self.id).order_by(
+            KBStagingChunk.position).all()
+
+    def delete_cascade(self, remove_original=True):
+        """删除待审核文档及其全部切片；可选择性删除留存原件。"""
+        KBStagingChunk.query.filter_by(staging_id=self.id).delete()
+        if remove_original and self.original_path:
+            try:
+                if os.path.exists(self.original_path):
+                    os.remove(self.original_path)
+            except Exception:
+                pass
+        db.session.delete(self)
+        db.session.commit()
+
+
+class KBStagingChunk(db.Model):
+    """待审核切片：kind='text' 文本块 / kind='table' 独立表格块。
+
+    表格块不参与正文切分，rows_json / merges_json 保存真实抽取的结构化数据；
+    用户可在审核时编辑文本、删除错误块、合并相邻块。
+    """
+    __tablename__ = 'kb_staging_chunks'
+    __table_args__ = {'mysql_charset': 'utf8mb4', 'mysql_collate': 'utf8mb4_unicode_ci'}
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    staging_id = db.Column(db.String(36), nullable=False, index=True)
+    kb_id = db.Column(db.String(36), nullable=False, index=True)
+    kind = db.Column(db.String(16), default='text')  # text / table
+    position = db.Column(db.Integer, default=0)
+    content = db.Column(db.Text(length=16777215), default='')  # 文本块内容 / 表格文本化描述
+    section_path = db.Column(db.String(500), default='')  # 章节路径
+    rows_json = db.Column(db.Text(length=16777215), default='[]')
+    merges_json = db.Column(db.Text(length=16777215), default='[]')
+    table_name = db.Column(db.String(255), default='')
+    source = db.Column(db.String(255), default='')
+    original_name = db.Column(db.String(255), default='')
+    row_count = db.Column(db.Integer, default=0)
+    col_count = db.Column(db.Integer, default=0)
+    fill_rate = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        d = {
+            'id': self.id,
+            'staging_id': self.staging_id,
+            'kind': self.kind or 'text',
+            'position': self.position,
+            'section_path': self.section_path or '',
+            'content': self.content or '',
+            'table_name': self.table_name or '',
+            'source': self.source or '',
+            'original_name': self.original_name or '',
+            'row_count': self.row_count,
+            'col_count': self.col_count,
+            'fill_rate': self.fill_rate,
+        }
+        if self.kind == 'table':
+            d['rows'] = self._loads(self.rows_json)
+            d['merges'] = self._loads(self.merges_json)
+        return d
+
+    @staticmethod
+    def _loads(s):
+        import json
+        try:
+            return json.loads(s or '[]')
+        except Exception:
+            return []

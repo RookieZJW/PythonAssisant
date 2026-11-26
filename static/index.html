@@ -502,6 +502,14 @@ button{cursor:pointer}
 .kb-doc-main,.kb-share-main{flex:1;min-width:0}
 .kb-doc-name,.kb-share-name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kb-doc-meta,.kb-share-meta{font-size:10px;color:var(--faint);margin-top:2px}
+/* 待审核区 */
+.kb-staging-hint{font-size:10.5px;color:var(--faint);line-height:1.6;margin-bottom:9px}
+.kb-staging-row{cursor:pointer;transition:border-color var(--dur) var(--ease)}
+.kb-staging-row:hover{border-color:var(--celadon-line)}
+.kb-staging-badge{
+  font-size:10px;padding:2px 7px;border-radius:10px;background:var(--amber-soft,#f5b74a22);
+  color:var(--amber,#d99a2b);border:1px solid var(--amber-line,#d99a2b55);white-space:nowrap
+}
 .kb-sec-badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:9px;background:var(--celadon-line);color:var(--celadon);font-size:10px;text-align:center;margin-left:4px}
 .kb-no-ori{font-size:10px;color:var(--faint);padding:4px 6px}
 .kb-doc-row a.icon-btn{color:var(--celadon);text-decoration:none}
@@ -885,6 +893,14 @@ button{cursor:pointer}
             </div>
             <div class="kb-doc-list" id="kbDocList"></div>
           </div>
+          <div class="kb-section kb-owner-only" id="kbStagingSection">
+            <div class="kb-section-head">
+              <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-file"/></svg>待审核文档 <span class="kb-sec-badge" id="kbStagingCount">0</span></div>
+              <button class="kb-mini-btn" id="btnGoReview" onclick="goToReview()" title="打开独立审核页面" style="color:var(--celadon);border-color:var(--celadon-line)">前往审核 →</button>
+            </div>
+            <div class="kb-staging-hint">上传的文档会先解析切块到这里，审核通过后才会进入知识库并被检索。点「前往审核」打开全屏审核页逐块处理。</div>
+            <div class="kb-doc-list" id="kbStagingList"></div>
+          </div>
           <div class="kb-section" id="kbTableSection">
             <div class="kb-section-head">
               <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-doc"/></svg>已收录表格 <span class="kb-sec-badge" id="kbTableCount">0</span></div>
@@ -1155,6 +1171,36 @@ async function renderKbDetail(){
       '</div>';
   }).join(''):'<div class="kb-empty-inline">还没有分享给其他用户</div>';
   loadKbTables(kbModalKbId);
+  if(isOwner)loadKbStaging(kbModalKbId);
+}
+
+// ---------- 待审核区 ----------
+async function loadKbStaging(kbId){
+  const box=document.getElementById('kbStagingList');
+  const badge=document.getElementById('kbStagingCount');
+  if(!box)return;
+  kbId=kbId||kbModalKbId;
+  try{
+    const resp=await api('GET','/kb/'+encodeURIComponent(kbId)+'/staging');
+    if(resp.code!==200){box.innerHTML='<div class="kb-review-empty">待审核列表加载失败</div>';return;}
+    const rows=resp.data||[];
+    if(badge)badge.textContent=rows.length;
+    box.innerHTML=rows.length?rows.map(s=>{
+      const size=s.size?(s.size<1024?'<1 KB':Math.round(s.size/1024)+' KB'):'';
+      const meta=(size?size+' · ':'')+(s.chunk_count||0)+' 段文本'+((s.table_count||0)?' · '+s.table_count+' 张表':'');
+      return '<div class="kb-doc-row kb-staging-row" onclick="goToReview()">'+
+        '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
+        '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(s.filename)+'</span>'+
+        '<span class="kb-doc-meta">'+escHtml(meta)+' · 待审核</span></span>'+
+        '<span class="kb-staging-badge">审核</span>'+
+        '</div>';
+    }).join(''):'<div class="kb-review-empty">暂无待审核文档。上传的文档会先到这里，确认后才进入知识库。</div>';
+  }catch(e){box.innerHTML='<div class="kb-review-empty">待审核列表加载失败</div>';}
+}
+
+function goToReview(){
+  if(!kbModalKbId){kbToast('请先选择知识库');return;}
+  location.href='/review?kb_id='+encodeURIComponent(kbModalKbId);
 }
 async function loadKbTables(kbId){
   const box=document.getElementById('kbTableList');
@@ -1406,13 +1452,13 @@ async function runKbBulkUpload(files,kbId,tooBig){
     const ok=summary.success||0,fail=summary.failed||0;
     fill.style.width='100%';
     ratio.textContent=ok+'/'+(ok+fail);
-    title.textContent='处理完成：成功 '+ok+' 个'+(fail?'，失败 '+fail+' 个':'')+
-      (summary.chunks?' · 共 '+(summary.chunks)+' 段':'');
+    title.textContent='解析完成：成功 '+ok+' 个'+(fail?'，失败 '+fail+' 个':'')+
+      (summary.chunks?' · 共 '+(summary.chunks)+' 段，待审核':'');
     if(summary.vector_msg)kbUpWarn(summary.vector_msg);
     if(kbModalKbId===kbId){
-      try{await loadKnowledgeBases();await renderKbDetail();}catch(e){}
+      try{await renderKbDetail();}catch(e){}
     }
-    kbToast(fail?('已加入 '+ok+' 个文档，'+fail+' 个失败'):('已加入 '+ok+' 个文档'));
+    kbToast(fail?('已解析 '+ok+' 个文档（'+fail+' 个失败），请审核'):('已解析 '+ok+' 个文档，请在待审核区确认'));
   }else{
     title.textContent='上传未完成，请重试';
   }

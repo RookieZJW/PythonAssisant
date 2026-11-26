@@ -637,12 +637,20 @@ def extract_tables(filepath, filename):
 
 
 def tables_to_text(tables):
-    """把结构化表格转成可读文本，供向量检索使用（保留行列语义）。"""
+    """把结构化表格转成可读文本，供向量检索使用（保留行列语义）。
+
+    字段用 .get() 容错：审核入库时可能只有 table_name/rows，
+    行列数与来源可从 rows 现算，缺字段不应让整个入库流程失败。
+    """
     parts = []
     for t in tables:
+        rows = t.get('rows') or []
+        row_count = t.get('row_count') or len(rows)
+        col_count = t.get('col_count') or (max((len(r) for r in rows), default=0))
         lines = ['【表格：%s（%d行×%d列，来源：%s）】'
-                 % (t['table_name'], t['row_count'], t['col_count'], t['source'])]
-        for row in t['rows']:
+                 % (t.get('table_name') or '表格', row_count, col_count,
+                    t.get('source') or '')]
+        for row in rows:
             lines.append(' | '.join('' if c is None else str(c) for c in row))
         parts.append('\n'.join(lines))
     return '\n\n'.join(parts)

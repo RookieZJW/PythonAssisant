@@ -15,11 +15,13 @@
 import json
 import logging
 import os
+import re
 import shutil
 import uuid
 from flask import Blueprint, Response, request, session, stream_with_context, send_file
 from app.models.user import User
-from app.models.knowledge_base import KnowledgeBase, KBDocument, KBTable, KBShare
+from app.models.knowledge_base import (KnowledgeBase, KBDocument, KBChunk, KBTable,
+                                       KBShare, KBStaging, KBStagingChunk)
 from app.services import kb_service
 from app.utils.response import success, error
 from app.extensions import db
@@ -71,6 +73,93 @@ def _save_tables(kb_id, doc, parsed_tables, original_path):
     if count:
         db.session.commit()
     return count
+
+
+def _stage_document(kb_id, filename, content, file_size, original_path,
+                    parsed_tables, uploaded_by):
+    """把解析结果写入待审核区（不进正式表、不建向量索引）。
+
+    正文按语义切块，表格作为独立块，两者交错按原顺序存 position。
+    返回 (staging, 文本块数, 表格块数)。
+    """
+    stage = KBStaging(
+        kb_id=kb_id, filename=filename, size=file_size,
+        original_path=original_path, uploaded_by=uploaded_by or '',
+    )
+    db.session.add(stage)
+    db.session.flush()  # 拿到 stage.id
+
+    # 文本块：结构化切分（制度类识别标题层级，块带章节路径和页码）
+    structured = kb_service.split_structured(content, with_page=True)
+    text_units = [('text', c, path, page) for path, c, page in structured]
+
+    # 表格块：content 用文本化描述（供审核时读懂），结构化数据单独存。
+    # 从 source（如「PDF 第3页 第1个表格」）解析页码，用于按文档顺序归位。
+    table_pages = re.compile(r'第\s*(\d+)\s*页')
+    tables_by_page = {}   # page -> [table dict]，保持原顺序
+    no_page_tables = []
+    for t in parsed_tables:
+        m = table_pages.search(t.get('source', '') or '')
+        if m:
+            tables_by_page.setdefault(int(m.group(1)), []).append(t)
+        else:
+            no_page_tables.append(t)
+
+    def table_unit(t):
+        desc = '%s（%d行×%d列）' % (t.get('table_name', '表格'),
+                                   t.get('row_count', 0), t.get('col_count', 0))
+        return ('table', desc, t)
+
+    # 按文档顺序交错：遍历文本块，把表格插到「该页最后一个文本块」之后。
+    # 表格不拆散，同页多表按抽取顺序排列。
+    units = []
+    flushed_pages = set()
+    total = len(text_units)
+    for idx, item in enumerate(text_units):
+        units.append(item[:3])   # (kind, content, meta)
+        page = item[3]
+        if not page or page not in tables_by_page or page in flushed_pages:
+            continue
+        # 该页后续还有文本块 → 等最后一个再插
+        if any(text_units[j][3] == page for j in range(idx + 1, total)):
+            continue
+        for t in tables_by_page[page]:
+            units.append(table_unit(t))
+        flushed_pages.add(page)
+    # 未能归位的表格（无页码或页码不在文本块范围内）追加到末尾，保证不丢失
+    for page in sorted(tables_by_page):
+        if page not in flushed_pages:
+            for t in tables_by_page[page]:
+                units.append(table_unit(t))
+    for t in no_page_tables:
+        units.append(table_unit(t))
+    text_cnt = table_cnt = 0
+    for pos, item in enumerate(units):
+        kind, text, meta = item
+        section_path = meta if kind == 'text' else ''
+        tbl = meta if kind == 'table' else None
+        chunk = KBStagingChunk(
+            staging_id=stage.id, kb_id=kb_id, kind=kind, position=pos,
+            content=text, section_path=section_path,
+        )
+        if kind == 'table' and tbl:
+            chunk.rows_json = json.dumps(tbl.get('rows', []), ensure_ascii=False)
+            chunk.merges_json = json.dumps(tbl.get('merges', []), ensure_ascii=False)
+            chunk.table_name = tbl.get('table_name', '')
+            chunk.source = tbl.get('source', '')
+            chunk.original_name = filename
+            chunk.row_count = tbl.get('row_count', 0)
+            chunk.col_count = tbl.get('col_count', 0)
+            chunk.fill_rate = tbl.get('fill_rate', 0.0)
+            table_cnt += 1
+        else:
+            text_cnt += 1
+        db.session.add(chunk)
+
+    stage.chunk_count = text_cnt
+    stage.table_count = table_cnt
+    db.session.commit()
+    return stage, text_cnt, table_cnt
 
 
 def _parse_tables_safe(tmp_path, filename):
@@ -197,11 +286,6 @@ def upload_document(kb_id):
     if ext not in ALLOWED:
         return error("不支持的文件格式", 400)
 
-    # 同名文档去重：先删除旧文档及其块
-    old = KBDocument.query.filter_by(kb_id=kb_id, filename=filename).first()
-    if old:
-        old.delete_cascade()
-
     tmp_path = os.path.join(UPLOAD_DIR, ('kb_' + uuid.uuid4().hex[:8] + '_' + filename))
     original_path = None
     parsed_tables = []
@@ -220,24 +304,17 @@ def upload_document(kb_id):
         except Exception as e:
             logger.warning('[KB上传] 临时文件清理失败（不影响入库）：%s', e)
 
-    if not content or content.startswith('['):
+    if not content or content.startswith('[错误]'):
+        if original_path and os.path.exists(original_path):
+            try: os.remove(original_path)
+            except Exception: pass
         return error("文档解析失败或内容为空：" + str(content)[:100], 400)
 
-    # 把表格内容以可读文本并入正文，让向量检索也能命中表格里的数据
-    if parsed_tables:
-        from app.services import kb_table_service as ts
-        table_text = ts.tables_to_text(parsed_tables)
-        content = (content + '\n\n' + table_text)[:MAX_CONTENT_CHARS]
-
-    doc = KBDocument(kb_id=kb_id, filename=filename, content=content,
-                     size=file_size, original_path=original_path,
-                     table_count=len(parsed_tables))
-    db.session.add(doc)
-    db.session.commit()
-    table_count = _save_tables(kb_id, doc, parsed_tables, original_path)
-    count = kb_service.index_document(doc)
-    return success({'id': doc.id, 'filename': filename, 'chunk_count': count,
-                    'table_count': table_count}, "文档已加入知识库")
+    stage, text_cnt, table_cnt = _stage_document(
+        kb_id, filename, content, file_size, original_path, parsed_tables, uid)
+    return success({'id': stage.id, 'filename': filename, 'staging': True,
+                    'chunk_count': text_cnt, 'table_count': table_cnt},
+                   "文档已解析完成，等待审核；审核通过后才会进入知识库")
 
 
 @kb_bp.route('/kb/<kb_id>/documents/bulk', methods=['POST'])
@@ -316,7 +393,7 @@ def upload_documents_bulk(kb_id):
                     logger.exception('[KB批量] 解析异常: %s', name)
                     parse_err = '解析异常：%s' % e
 
-                if not content or content.startswith('['):
+                if not content or content.startswith('[错误]'):
                     fail_cnt += 1
                     reason = parse_err or ('内容为空' if not content
                                            else str(content)[:120])
@@ -336,26 +413,18 @@ def upload_documents_bulk(kb_id):
                     from app.services import kb_table_service as ts
                     content = (content + '\n\n' + ts.tables_to_text(table_data))[:MAX_CONTENT_CHARS]
 
-                # ---- 2. 切块入库（暂不写向量）----
+                # ---- 2. 切块 → 落入待审核区（不进正式表、不向量化）----
                 yield _sse({'type': 'file', 'stage': 'chunk', 'index': i,
                             'total': total, 'filename': name,
                             'message': '正在切分文本'})
                 try:
-                    old = KBDocument.query.filter_by(
-                        kb_id=kb_id, filename=name).first()
-                    if old:
-                        old.delete_cascade()
-                    doc = KBDocument(kb_id=kb_id, filename=name,
-                                     content=content, size=item['size'],
-                                     original_path=original_path,
-                                     table_count=len(table_data))
-                    db.session.add(doc)
-                    db.session.commit()
-                    _save_tables(kb_id, doc, table_data, original_path)
-                    count = kb_service.index_document(doc, with_vectors=False)
+                    stage, text_cnt, table_cnt = _stage_document(
+                        kb_id, name, content, item['size'], original_path,
+                        table_data, uid)
+                    count = text_cnt + table_cnt
                 except Exception as e:
                     db.session.rollback()
-                    logger.exception('[KB批量] 入库异常: %s', name)
+                    logger.exception('[KB批量] 待审核区写入异常: %s', name)
                     fail_cnt += 1
                     yield _sse({'type': 'file', 'stage': 'error', 'index': i,
                                 'total': total, 'filename': name,
@@ -367,48 +436,13 @@ def upload_documents_bulk(kb_id):
                 yield _sse({'type': 'file', 'stage': 'done', 'index': i,
                             'total': total, 'filename': name,
                             'chunk_count': count,
-                            'message': '已切分 %d 段' % count})
+                            'message': '已切分 %d 段，等待审核' % count})
 
-            # ---- 3. 整批统一向量化 ----
-            vector_ok, vector_msg = False, ''
-            if ok_cnt:
-                yield _sse({'type': 'vector', 'stage': 'start', 'done': 0,
-                            'total': 0, 'message': '正在向量化文本…'})
-                try:
-                    from app.services import kb_vector_service as vs
-                    for stage, done, tot, msg in vs.iter_rebuild_index(kb_id):
-                        if stage == 'progress':
-                            yield _sse({'type': 'vector', 'stage': 'progress',
-                                        'done': done, 'total': tot,
-                                        'message': '正在向量化 %d/%d 段' % (done, tot)})
-                        elif stage == 'stored':
-                            vector_ok = True
-                            yield _sse({'type': 'vector', 'stage': 'done',
-                                        'done': tot, 'total': tot,
-                                        'message': '向量索引已更新（%d 段）' % tot})
-                        elif stage == 'no_chunks':
-                            vector_ok = True
-                        elif stage == 'no_collection':
-                            vector_msg = '向量库不可用，已改用关键词检索'
-                            yield _sse({'type': 'vector', 'stage': 'warn',
-                                        'done': 0, 'total': tot, 'message': vector_msg})
-                        elif stage == 'embed_failed':
-                            vector_msg = '向量化服务调用失败，已改用关键词检索'
-                            yield _sse({'type': 'vector', 'stage': 'warn',
-                                        'done': done, 'total': tot, 'message': vector_msg})
-                        else:  # error
-                            vector_msg = '向量写入失败：%s' % (msg or '未知错误')
-                            yield _sse({'type': 'vector', 'stage': 'warn',
-                                        'done': 0, 'total': tot, 'message': vector_msg})
-                except Exception as e:
-                    logger.exception('[KB批量] 向量化异常')
-                    vector_msg = '向量化异常：%s' % e
-                    yield _sse({'type': 'vector', 'stage': 'warn',
-                                'message': vector_msg})
-
+            # 审核前不做向量化；向量化在用户点击"通过审核"时触发
             yield _sse({'type': 'end', 'success': ok_cnt, 'failed': fail_cnt,
-                        'chunks': chunk_total, 'vector_ok': vector_ok,
-                        'vector_msg': vector_msg, 'rejected': rejected})
+                        'chunks': chunk_total, 'vector_ok': False,
+                        'vector_msg': '文档已解析，请在待审核区确认后再入库',
+                        'need_review': True, 'rejected': rejected})
         finally:
             _cleanup_files(paths)
 
@@ -432,6 +466,241 @@ def delete_document(kb_id, doc_id):
         return error("文档不存在", 404)
     doc.delete_cascade()
     return success(None, "文档已删除")
+
+
+# ---------- 待审核区（人工把关后才入库） ----------
+
+@kb_bp.route('/kb/<kb_id>/staging', methods=['GET'])
+def list_staging(kb_id):
+    """待审核文档列表（仅 owner 可见）。"""
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以查看待审核区", 403)
+    rows = KBStaging.query.filter_by(kb_id=kb_id).order_by(
+        KBStaging.created_at.desc()).all()
+    return success([r.to_dict() for r in rows])
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>', methods=['GET'])
+def get_staging(kb_id, stage_id):
+    """待审核文档详情：含全部切片（文本块 + 独立表格块）。"""
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以查看待审核区", 403)
+    stage = KBStaging.query.filter_by(id=stage_id, kb_id=kb_id).first()
+    if not stage:
+        return error("待审核文档不存在", 404)
+    d = stage.to_dict()
+    d['chunks'] = [c.to_dict() for c in stage.chunks()]
+    return success(d)
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>/chunks/<chunk_id>', methods=['PUT'])
+def edit_staging_chunk(kb_id, stage_id, chunk_id):
+    """编辑切片：支持改正文、改章节标题（section_path）、改表格名。
+
+    section_path 是检索时聚合父块的依据，也是审核列表里显示的绿色标题；
+    自动识别可能出错，审核时允许人工修正。
+    """
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以审核", 403)
+    chunk = KBStagingChunk.query.filter_by(
+        id=chunk_id, staging_id=stage_id, kb_id=kb_id).first()
+    if not chunk:
+        return error("切片不存在", 404)
+    data = request.get_json(silent=True) or {}
+
+    content = data.get('content')
+    if content is not None:
+        if not str(content).strip():
+            return error("切片内容不能为空", 400)
+        chunk.content = str(content).strip()
+
+    if 'section_path' in data:
+        path = str(data.get('section_path') or '').strip()
+        if len(path) > 500:
+            return error("章节标题不能超过 500 字", 400)
+        chunk.section_path = path
+
+    if 'table_name' in data and chunk.kind == 'table':
+        name = str(data.get('table_name') or '').strip()
+        if name:
+            chunk.table_name = name[:255]
+
+    db.session.commit()
+    return success(chunk.to_dict(), "切片已更新")
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>/chunks/<chunk_id>', methods=['DELETE'])
+def delete_staging_chunk(kb_id, stage_id, chunk_id):
+    """删除错误切片（审核时剔除解析错误的内容）。"""
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以审核", 403)
+    chunk = KBStagingChunk.query.filter_by(
+        id=chunk_id, staging_id=stage_id, kb_id=kb_id).first()
+    if not chunk:
+        return error("切片不存在", 404)
+    stage = KBStaging.query.get(stage_id)
+    db.session.delete(chunk)
+    if stage:
+        if chunk.kind == 'table':
+            stage.table_count = max(0, (stage.table_count or 0) - 1)
+        else:
+            stage.chunk_count = max(0, (stage.chunk_count or 0) - 1)
+    db.session.commit()
+    return success(None, "切片已删除")
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>/chunks/merge', methods=['POST'])
+def merge_staging_chunks(kb_id, stage_id):
+    """合并相邻文本切片（修复被切散的段落）。仅支持纯文本块。"""
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以审核", 403)
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids') or []
+    if not isinstance(ids, list) or len(ids) < 2:
+        return error("请至少选择两个切片合并", 400)
+    chunks = KBStagingChunk.query.filter(
+        KBStagingChunk.staging_id == stage_id,
+        KBStagingChunk.kb_id == kb_id,
+        KBStagingChunk.id.in_(ids),
+    ).order_by(KBStagingChunk.position).all()
+    if len(chunks) != len(ids):
+        return error("部分切片不存在", 404)
+    if any(c.kind != 'text' for c in chunks):
+        return error("表格块不能与文本块合并", 400)
+    merged_text = '\n'.join(c.content for c in chunks if c.content)
+    first = chunks[0]
+    first.content = merged_text
+    stage = KBStaging.query.get(stage_id)
+    for c in chunks[1:]:
+        db.session.delete(c)
+    if stage:
+        stage.chunk_count = max(1, (stage.chunk_count or 0) - (len(chunks) - 1))
+    db.session.commit()
+    return success(first.to_dict(), "已合并 %d 个切片" % len(chunks))
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>/approve', methods=['POST'])
+def approve_staging(kb_id, stage_id):
+    """审核通过：把切片写入正式表、抽取表格入库、触发向量化。
+
+    这是数据进入知识库的唯一入口——审核前的解析结果对检索完全不可见。
+    """
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以通过审核", 403)
+    stage = KBStaging.query.filter_by(id=stage_id, kb_id=kb_id).first()
+    if not stage:
+        return error("待审核文档不存在", 404)
+    chunks = stage.chunks()
+    if not chunks:
+        return error("没有可入库的切片，请先驳回", 400)
+
+    # 同名正式文档先删除（避免重复入库）
+    old = KBDocument.query.filter_by(kb_id=kb_id, filename=stage.filename).first()
+    if old:
+        old.delete_cascade()
+
+    try:
+        # 正式文档正文 = 审核后的文本块重新拼回
+        text_contents = [c.content for c in chunks
+                         if c.kind == 'text' and c.content]
+        body = '\n\n'.join(text_contents)
+        doc = KBDocument(
+            kb_id=kb_id, filename=stage.filename, content=body,
+            size=stage.size or 0, original_path=stage.original_path,
+            table_count=stage.table_count or 0,
+        )
+        db.session.add(doc)
+        db.session.flush()
+
+        text_cnt = table_cnt = 0
+        for c in chunks:
+            if c.kind == 'table':
+                row = KBTable(
+                    kb_id=kb_id, doc_id=doc.id, doc_name=stage.filename,
+                    table_name=c.table_name or '表格', source=c.source or '',
+                    rows_json=c.rows_json or '[]', merges_json=c.merges_json or '[]',
+                    row_count=c.row_count or 0, col_count=c.col_count or 0,
+                    fill_rate=c.fill_rate or 0.0,
+                    original_path=stage.original_path,
+                    original_name=c.original_name or stage.filename,
+                )
+                db.session.add(row)
+                table_cnt += 1
+            else:
+                chunk = KBChunk(
+                    kb_id=kb_id, doc_id=doc.id, doc_name=stage.filename,
+                    content=c.content, position=text_cnt,
+                    section_path=getattr(c, 'section_path', '') or '',
+                )
+                db.session.add(chunk)
+                text_cnt += 1
+        doc.chunk_count = text_cnt
+        doc.table_count = table_cnt
+
+        # 表格文本化后也作为检索块写入，保证表格数据能被问答命中
+        from app.services import kb_table_service as ts
+        table_rows = [c for c in chunks if c.kind == 'table']
+        table_texts = ts.tables_to_text([
+            {'table_name': c.table_name, 'rows': c._loads(c.rows_json),
+             'row_count': c.row_count, 'col_count': c.col_count,
+             'source': c.source}
+            for c in table_rows
+        ]) if table_rows else ''
+        if table_texts:
+            db.session.add(KBChunk(
+                kb_id=kb_id, doc_id=doc.id, doc_name=stage.filename,
+                content=table_texts, position=text_cnt,
+            ))
+            doc.chunk_count = text_cnt + 1
+
+        # 删除待审核记录（保留原件，正式表已引用同一路径）
+        KBStagingChunk.query.filter_by(staging_id=stage.id).delete()
+        db.session.delete(stage)
+        db.session.commit()
+
+        # 整库重建向量索引
+        vector_msg = ''
+        try:
+            from app.services import kb_vector_service as vs
+            ok = vs.rebuild_index(kb_id)
+            vector_msg = '向量索引已更新' if ok else '向量库不可用，已保留关键词检索'
+        except Exception as e:
+            logger.warning('[审核] 向量化失败: %s', e)
+            vector_msg = '向量化失败：%s' % e
+
+        return success({'doc_id': doc.id, 'chunk_count': doc.chunk_count,
+                        'table_count': table_cnt, 'vector_msg': vector_msg},
+                       "审核通过，文档已正式入库")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception('[审核] 入库失败')
+        return error("入库失败：%s" % e, 500)
+
+
+@kb_bp.route('/kb/<kb_id>/staging/<stage_id>', methods=['DELETE'])
+def reject_staging(kb_id, stage_id):
+    """驳回待审核文档：丢弃解析结果和留存原件，不进知识库。"""
+    uid, err = _require_login()
+    if err: return err
+    if not KnowledgeBase.is_owner(kb_id, uid):
+        return error("只有知识库所有者可以驳回", 403)
+    stage = KBStaging.query.filter_by(id=stage_id, kb_id=kb_id).first()
+    if not stage:
+        return error("待审核文档不存在", 404)
+    stage.delete_cascade(remove_original=True)
+    return success(None, "已驳回并丢弃该文档")
 
 
 # ---------- 表格清单与原件下载 ----------

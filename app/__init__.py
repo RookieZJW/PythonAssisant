@@ -106,7 +106,8 @@ def create_app(config_name=None):
         CORS(app)
 
     # 4. 提前导入所有模型，确保 SQLAlchemy 的 create_all 能发现它们
-    from .models import User, Conversation, Message, Role, KnowledgeBase, KBDocument, KBChunk, KBTable, KBShare  # noqa
+    from .models import (User, Conversation, Message, Role, KnowledgeBase, KBDocument,
+                         KBChunk, KBTable, KBShare, KBStaging, KBStagingChunk)  # noqa
 
     # 5. 初始化扩展（包括数据库连接、建表等）
     init_extensions(app)
@@ -173,6 +174,14 @@ def create_app(config_name=None):
         return send_from_directory(
             _os.path.join(app.root_path, '..', 'static'),
             'index.html'
+        )
+
+    @app.route('/review')
+    def review_page():
+        """独立审核页面：全屏逐切片审核知识库上传文档"""
+        return send_from_directory(
+            _os.path.join(app.root_path, '..', 'static'),
+            'review.html'
         )
 
     return app

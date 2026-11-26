@@ -29,10 +29,12 @@ CREATE TABLE `kb_chunks` (
   `doc_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `position` int DEFAULT 0,
+  `section_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `created_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_kb_chunks_kb` (`kb_id`),
-  KEY `ix_kb_chunks_doc` (`doc_id`)
+  KEY `ix_kb_chunks_doc` (`doc_id`),
+  KEY `ix_kb_chunks_section` (`section_path`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `kb_documents`;
 CREATE TABLE `kb_documents` (
@@ -78,6 +80,42 @@ CREATE TABLE `kb_shares` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_kb_share` (`kb_id`,`shared_with`),
   KEY `ix_kb_shares_user` (`shared_with`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+DROP TABLE IF EXISTS `kb_staging_chunks`;
+CREATE TABLE `kb_staging_chunks` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `staging_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kind` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT 'text',
+  `position` int DEFAULT 0,
+  `content` mediumtext COLLATE utf8mb4_unicode_ci,
+  `section_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `rows_json` mediumtext COLLATE utf8mb4_unicode_ci,
+  `merges_json` mediumtext COLLATE utf8mb4_unicode_ci,
+  `table_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `source` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `original_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `row_count` int DEFAULT 0,
+  `col_count` int DEFAULT 0,
+  `fill_rate` float DEFAULT 0,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_staging_chunks_staging` (`staging_id`),
+  KEY `ix_kb_staging_chunks_kb` (`kb_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+DROP TABLE IF EXISTS `kb_staging`;
+CREATE TABLE `kb_staging` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kb_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size` int DEFAULT 0,
+  `original_path` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `chunk_count` int DEFAULT 0,
+  `table_count` int DEFAULT 0,
+  `uploaded_by` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_kb_staging_kb` (`kb_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `knowledge_bases`;
 CREATE TABLE `knowledge_bases` (

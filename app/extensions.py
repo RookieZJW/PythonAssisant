@@ -53,6 +53,7 @@ def init_extensions(app):
         _ensure_kb_content_column()
         _ensure_kb_document_original_columns()
         _ensure_kb_table_merges_column()
+        _ensure_kb_section_path_columns()
 
     # ---- 步骤4: 注册 SocketIO 事件 ----
     # 从 voice.py 导入事件注册函数, 让它能处理 /tts 相关的 WebSocket 消息
@@ -157,6 +158,26 @@ def _ensure_kb_table_merges_column():
             print("[DB] kb_tables.merges_json 已就绪")
     except Exception as e:
         print(f"[DB] 表格合并字段迁移失败：{e}")
+
+
+def _ensure_kb_section_path_columns():
+    """轻量迁移：给 kb_chunks / kb_staging_chunks 补 section_path 字段。"""
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(db.engine)
+        tables = set(inspector.get_table_names())
+        for table in ('kb_chunks', 'kb_staging_chunks'):
+            if table not in tables:
+                continue
+            columns = {c['name'] for c in inspector.get_columns(table)}
+            if 'section_path' not in columns:
+                with db.engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE %s ADD COLUMN section_path VARCHAR(500) DEFAULT ''" % table
+                    ))
+                print("[DB] %s.section_path 已就绪" % table)
+    except Exception as e:
+        print(f"[DB] section_path 字段迁移失败：{e}")
 
 
 def _ensure_database_exists(db_uri):
