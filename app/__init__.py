@@ -138,6 +138,12 @@ def create_app(config_name=None):
     app.register_blueprint(kb_bp, url_prefix='/api/v1')
     app.register_blueprint(auth_bp, url_prefix='/api/v1')
 
+    # 早期版本遗留的旧下载链接 /api/kb/download/<id>?file=<uuid>（无 /v1 前缀）：
+    # 用统一响应给出"链接已过期"提示或真实原件，不再让 IDM 报"无法下载-没有文件"。
+    from .api.knowledge_base import legacy_download_response
+    app.add_url_rule('/api/kb/download/<legacy_id>', 'legacy_download',
+                     legacy_download_response, methods=['GET'])
+
     # 9. 登录保护 —— 未登录用户重定向到登录页
     from flask import session, redirect, request as _req
 
@@ -149,6 +155,15 @@ def create_app(config_name=None):
         path = _req.path
         if any(path.startswith(p) for p in allow):
             return None  # 放行
+        # 知识库表格原件下载：URL 本身含 kb_id + table_id（UUID，不可枚举），
+        # 属于"持有链接即可下载"的 capability URL。IDM / 迅雷等下载器接管下载时
+        # 会用自身 HTTP 客户端重新发请求，不带浏览器 Cookie，若强制登录会返回 401，
+        # 导致下载失败（浏览器报"无法下载 - 没有文件"）。故对下载路径单独放行。
+        if path.startswith('/api/v1/kb/') and path.endswith('/download'):
+            return None
+        # 历史卡片里的旧格式下载链接兼容路由，同样放行（内部按 file UUID 定位原件）
+        if path.startswith('/api/kb/download/') or path.startswith('/api/v1/kb/download/'):
+            return None
         if not session.get('user_id'):
             # API 请求返回 401 JSON，页面请求重定向
             if path.startswith('/api/'):

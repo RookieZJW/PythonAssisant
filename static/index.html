@@ -462,9 +462,11 @@ button{cursor:pointer}
   width:27px;height:27px;border-radius:7px;flex:none;display:flex;
   align-items:center;justify-content:center;background:var(--celadon-soft);color:var(--celadon);
 }
-.kb-list-main{flex:1;min-width:0}
-.kb-list-name{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kb-list-meta{font-size:10px;color:var(--faint);margin-top:1px}
+.kb-list-main{flex:1;min-width:0;overflow:hidden}
+/* 名称与元信息必须各占一行：inline span 的 nowrap/ellipsis 不生效，
+   会把"X 篇文档 · Y 段"挤到名称同一行并把末尾文字挤到下一行 */
+.kb-list-name{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-list-meta{display:block;font-size:10px;color:var(--faint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kb-role-tag{
   font-size:10px;border:1px solid var(--line);border-radius:20px;
   padding:2px 7px;color:var(--faint);white-space:nowrap;flex:none;
@@ -511,6 +513,14 @@ button{cursor:pointer}
   color:var(--amber,#d99a2b);border:1px solid var(--amber-line,#d99a2b55);white-space:nowrap
 }
 .kb-sec-badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:9px;background:var(--celadon-line);color:var(--celadon);font-size:10px;text-align:center;margin-left:4px}
+/* 列表超过 5 条时折叠，点击展开/收起 */
+.kb-toggle-btn{
+  display:block;width:100%;margin-top:6px;padding:6px 0;text-align:center;
+  font-size:11px;color:var(--celadon);background:transparent;border:1px dashed var(--celadon-line);
+  border-radius:7px;cursor:pointer;transition:background var(--dur) var(--ease);
+}
+.kb-toggle-btn:hover{background:var(--celadon-line)}
+.kb-fold-rest{display:flex;flex-direction:column;gap:6px}
 .kb-no-ori{font-size:10px;color:var(--faint);padding:4px 6px}
 .kb-doc-row a.icon-btn{color:var(--celadon);text-decoration:none}
 .kb-doc-row.kb-clickable{cursor:pointer;transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
@@ -901,12 +911,6 @@ button{cursor:pointer}
             <div class="kb-staging-hint">上传的文档会先解析切块到这里，审核通过后才会进入知识库并被检索。点「前往审核」打开全屏审核页逐块处理。</div>
             <div class="kb-doc-list" id="kbStagingList"></div>
           </div>
-          <div class="kb-section" id="kbTableSection">
-            <div class="kb-section-head">
-              <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-doc"/></svg>已收录表格 <span class="kb-sec-badge" id="kbTableCount">0</span></div>
-            </div>
-            <div class="kb-doc-list" id="kbTableList"></div>
-          </div>
           <div class="kb-section kb-owner-only" id="kbShareSection">
             <div class="kb-section-head">
               <div class="kb-section-title"><svg class="ico ico-sm"><use href="#i-share"/></svg>分享给其他用户</div>
@@ -1150,16 +1154,17 @@ async function renderKbDetail(){
   document.querySelectorAll('#kbModal .kb-owner-only').forEach(el=>{el.style.display=isOwner?'':'none';});
   document.getElementById('kbSharedNotice').style.display=isOwner?'none':'flex';
   const docs=kbDetail.documents||[];
-  document.getElementById('kbDocList').innerHTML=docs.length?docs.map(d=>{
-    const sizeText=d.size?(d.size<1024?'<1 KB':Math.round(d.size/1024)+' KB'):'';
-    const meta=(sizeText?sizeText+' · ':'')+(d.chunk_count||0)+' 段';
-    return '<div class="kb-doc-row">'+
-      '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
-      '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(d.filename)+'</span>'+
-      '<span class="kb-doc-meta">'+escHtml(meta)+'</span></span>'+
-      (isOwner?'<button class="icon-btn danger" title="移除文档" onclick="deleteKbDocument(\''+d.id+'\')">'+svgUse('trash','ico ico-sm')+'</button>':'')+
-      '</div>';
-  }).join(''):'<div class="kb-empty-inline">还没有文档<br>点右上角「上传文档」可一次选择多个文件批量上传</div>';
+  document.getElementById('kbDocList').innerHTML=docs.length?renderCollapsibleList(
+    kbModalKbId+':docs', docs, d=>{
+      const sizeText=d.size?(d.size<1024?'<1 KB':Math.round(d.size/1024)+' KB'):'';
+      const meta=(sizeText?sizeText+' · ':'')+(d.chunk_count||0)+' 段';
+      return '<div class="kb-doc-row">'+
+        '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
+        '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(d.filename)+'</span>'+
+        '<span class="kb-doc-meta">'+escHtml(meta)+'</span></span>'+
+        (isOwner?'<button class="icon-btn danger" title="移除文档" onclick="deleteKbDocument(\''+d.id+'\')">'+svgUse('trash','ico ico-sm')+'</button>':'')+
+        '</div>';
+    },'还没有文档'):'<div class="kb-empty-inline">还没有文档<br>点右上角「上传文档」可一次选择多个文件批量上传</div>';
   const shares=kbDetail.shares||[];
   document.getElementById('kbShareList').innerHTML=shares.length?shares.map(s=>{
     const label=s.nickname?(s.nickname+'（'+s.username+'）'):s.username;
@@ -1170,7 +1175,6 @@ async function renderKbDetail(){
       '<button class="icon-btn danger" title="取消分享" onclick="removeKbShare(\''+s.id+'\')">'+svgUse('x','ico ico-sm')+'</button>'+
       '</div>';
   }).join(''):'<div class="kb-empty-inline">还没有分享给其他用户</div>';
-  loadKbTables(kbModalKbId);
   if(isOwner)loadKbStaging(kbModalKbId);
 }
 
@@ -1185,16 +1189,17 @@ async function loadKbStaging(kbId){
     if(resp.code!==200){box.innerHTML='<div class="kb-review-empty">待审核列表加载失败</div>';return;}
     const rows=resp.data||[];
     if(badge)badge.textContent=rows.length;
-    box.innerHTML=rows.length?rows.map(s=>{
-      const size=s.size?(s.size<1024?'<1 KB':Math.round(s.size/1024)+' KB'):'';
-      const meta=(size?size+' · ':'')+(s.chunk_count||0)+' 段文本'+((s.table_count||0)?' · '+s.table_count+' 张表':'');
-      return '<div class="kb-doc-row kb-staging-row" onclick="goToReview()">'+
-        '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
-        '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(s.filename)+'</span>'+
-        '<span class="kb-doc-meta">'+escHtml(meta)+' · 待审核</span></span>'+
-        '<span class="kb-staging-badge">审核</span>'+
-        '</div>';
-    }).join(''):'<div class="kb-review-empty">暂无待审核文档。上传的文档会先到这里，确认后才进入知识库。</div>';
+    box.innerHTML=rows.length?renderCollapsibleList(
+      kbId+':staging', rows, s=>{
+        const size=s.size?(s.size<1024?'<1 KB':Math.round(s.size/1024)+' KB'):'';
+        const meta=(size?size+' · ':'')+(s.chunk_count||0)+' 段文本'+((s.table_count||0)?' · '+s.table_count+' 张表':'');
+        return '<div class="kb-doc-row kb-staging-row" onclick="goToReview()">'+
+          '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
+          '<span class="kb-doc-main"><span class="kb-doc-name">'+escHtml(s.filename)+'</span>'+
+          '<span class="kb-doc-meta">'+escHtml(meta)+' · 待审核</span></span>'+
+          '<span class="kb-staging-badge">审核</span>'+
+          '</div>';
+      },'暂无待审核文档'):'<div class="kb-review-empty">暂无待审核文档。上传的文档会先到这里，确认后才进入知识库。</div>';
   }catch(e){box.innerHTML='<div class="kb-review-empty">待审核列表加载失败</div>';}
 }
 
@@ -1202,36 +1207,30 @@ function goToReview(){
   if(!kbModalKbId){kbToast('请先选择知识库');return;}
   location.href='/review?kb_id='+encodeURIComponent(kbModalKbId);
 }
-async function loadKbTables(kbId){
-  const box=document.getElementById('kbTableList');
-  const badge=document.getElementById('kbTableCount');
-  if(!box)return;
-  try{
-    const resp=await api('GET','/kb/'+encodeURIComponent(kbId)+'/tables');
-    if(resp.code!==200)return;
-    const tables=resp.data||[];
-    if(badge)badge.textContent=tables.length;
-    box.innerHTML=tables.length?tables.map(t=>{
-      const quality=Math.round((t.fill_rate||0)*100);
-      // 标题必须带来源文档，避免用户只看到"第27页-表格2"却不知道出自哪个文件
-      const isDefault=/^表格\s*\d+$/.test(t.table_name||'');
-      const docBase=(t.doc_name||'').replace(/\.[^.]+$/,'').trim();
-      const loc=t.table_name||'表格';
-      const title=docBase?(docBase+' · '+loc):loc;
-      const meta=(t.row_count||0)+' 行 × '+(t.col_count||0)+' 列 · 完整度 '+quality+'%';
-      const dlUrl='/api/v1/kb/'+kbId+'/tables/'+t.id+'/download'+
-        (t.doc_name?('?doc='+encodeURIComponent(t.doc_name)):'');
-      const dlName=dlFileName(t.original_name||t.doc_name,'表格原文件');
-      const dl=t.can_download
-        ? '<a class="icon-btn" title="下载原文件" href="'+escHtml(dlUrl)+'" download="'+escHtml(dlName)+'" onclick="event.stopPropagation()">'+svgUse('export','ico ico-sm')+'</a>'
-        : '<span class="kb-no-ori" title="旧文档未留存原件">无原件</span>';
-      return '<div class="kb-doc-row kb-clickable" data-tid="'+escHtml(t.id)+'" onclick="openTablePreview(\''+escHtml(t.id)+'\')" title="点击预览表格内容">'+
-        '<span class="kb-list-icon">'+svgUse('file','ico ico-sm')+'</span>'+
-        '<span class="kb-doc-main"><span class="kb-doc-name" title="'+escHtml(t.doc_name||'')+'">'+escHtml(title)+'</span>'+
-        '<span class="kb-doc-meta">'+escHtml(meta)+'</span></span>'+dl+
-        '</div>';
-    }).join(''):'<div class="kb-empty-inline">还没有收录表格<br>上传含表格的 Word / PDF / Excel 后会自动识别</div>';
-  }catch(e){box.innerHTML='<div class="kb-empty-inline">表格清单加载失败</div>';}
+/* ---- 列表折叠：超过 5 条只显示最近 5 条，其余点开查看 ---- */
+const KB_COLLAPSE_LIMIT=5;
+const kbListExpanded=Object.create(null);   // key -> 是否已展开（同一会话内记忆）
+function renderCollapsibleList(key, rows, rowHtml, emptyHtml){
+  if(!rows||!rows.length)return '<div class="kb-empty-inline">'+escHtml(emptyHtml||'暂无内容')+'</div>';
+  const expanded=!!kbListExpanded[key];
+  const visible=expanded?rows:rows.slice(0,KB_COLLAPSE_LIMIT);
+  const rest=rows.slice(KB_COLLAPSE_LIMIT);
+  let html=visible.map(rowHtml).join('');
+  if(rest.length){
+    html+='<div class="kb-fold-rest" '+(expanded?'':'style="display:none"')+'>'+
+          rest.map(rowHtml).join('')+'</div>';
+    html+='<button class="kb-toggle-btn" data-fold-key="'+escHtml(key)+'" onclick="toggleKbList(this)">'+
+          (expanded?'收起 ▲':'展开其余 '+rest.length+' 个 ▼')+'</button>';
+  }
+  return html;
+}
+function toggleKbList(btn){
+  const key=btn.getAttribute('data-fold-key');
+  kbListExpanded[key]=!kbListExpanded[key];
+  const box=btn.parentElement;
+  const fold=box.querySelector('.kb-fold-rest');
+  if(fold)fold.style.display=kbListExpanded[key]?'':'none';
+  btn.textContent=kbListExpanded[key]?'收起 ▲':'展开其余 '+(fold?fold.children.length:0)+' 个 ▼';
 }
 
 /* ---- 表格内容预览（只读真实 rows，不生成任何内容） ---- */
@@ -1872,8 +1871,12 @@ function appendTableCard(bubble,card){
   if(!body||body.querySelector('.kb-table-card'))return;
   const el=document.createElement('div');
   el.className='kb-table-card';
-  const safeName=escHtml(card.table_name||'表格');
+  // 下载物是原始文件，标题显示原文件名（新卡片有 doc_title；老卡片用 doc_name 去扩展名兜底）
+  let title=card.doc_title||'';
+  if(!title&&card.doc_name)title=String(card.doc_name).replace(/\.[^.]+$/,'');
+  const safeName=escHtml(title||card.table_name||'表格');
   const safeDoc=escHtml(card.doc_name||'');
+  const safeTbl=escHtml(card.table_name||'');
   // 旧卡片存的 URL 没有 doc 参数：文档重新上传后表格 id 会变，
   // 这里按文档名补上 doc 参数，后端即可回退到最新原件，避免下载 404。
   let dlUrl=card.url||'';
@@ -1883,8 +1886,9 @@ function appendTableCard(bubble,card){
   el.innerHTML=
     '<div class="kb-table-card-head"><span class="kb-table-card-ico">▦</span>'+
     '<div class="kb-table-card-meta"><b>'+safeName+'</b>'+
+    (safeTbl?'<small>内含表格：'+safeTbl+'</small>':'')+
     (safeDoc?'<small>来源：'+safeDoc+'</small>':'')+'</div></div>'+
-    '<div class="kb-table-card-note">这是知识库中的原始文件，可直接下载使用</div>'+
+    '<div class="kb-table-card-note">这是上传的原始文件，点击下载的是完整文件（含该表格）</div>'+
     '<a class="kb-table-card-btn" href="'+escHtml(dlUrl)+'" download="'+escHtml(dlFileName(card.doc_name,'表格原文件'))+'">下载原文件</a>';
   body.appendChild(el);
   msgBox.scrollTop=msgBox.scrollHeight;

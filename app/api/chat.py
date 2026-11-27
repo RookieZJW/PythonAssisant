@@ -201,23 +201,23 @@ def chat_stream():
                 if hit and score >= threshold:
                     table_hit = hit
 
-                # 表格名是"表格 1"这类默认值时，用文档名作为展示名
+                # 下载的是原始文件，展示名统一用原文件名（去扩展名）；
+                # 表格名退居"内含表格"说明，避免用户以为下载的是单个表格文件。
                 def _display_name(tb):
                     import re as _re
-                    n = tb.table_name or ''
-                    if _re.match(r'^表格\s*\d+$', n) and tb.doc_name:
-                        return _re.sub(r'\.[^.]+$', '', tb.doc_name)
-                    return n
+                    doc = tb.doc_name or ''
+                    base = _re.sub(r'\.[^.]+$', '', doc).strip()
+                    return base or (tb.table_name or '原始文件')
 
                 # 明确索要表格：直接给结果，不走大模型（杜绝生成不存在的表格）
                 if explicit_want:
                     if table_hit:
-                        hint = '在知识库中找到表格「%s」，这是上传的原始文件，可直接下载：\n\n' \
-                               % _display_name(table_hit)
+                        hint = '在知识库中找到原始文件「%s」（内含表格「%s」），可直接下载：\n\n' \
+                               % (_display_name(table_hit), table_hit.table_name or '表格')
                         for ch in hint:
                             yield 'data: ' + _json.dumps(ch) + '\n\n'
                         yield 'data: ' + _json.dumps(ts.table_hit_payload(table_hit)) + '\n\n'
-                        answer = '已返回表格「%s」的下载链接' % _display_name(table_hit)
+                        answer = '已返回原始文件「%s」的下载链接' % _display_name(table_hit)
                     else:
                         answer = '知识库中没有找到你需要的表格。我只提供库中已上传的真实文件，不会生成新表格。'
                         for ch in answer:
@@ -269,11 +269,12 @@ def chat_stream():
             table_card = None
             if table_hit is not None:
                 from app.services import kb_table_service as ts
-                _name = table_hit.table_name or ''
                 import re as _re
-                if _re.match(r'^表格\s*\d+$', _name) and table_hit.doc_name:
-                    _name = _re.sub(r'\.[^.]+$', '', table_hit.doc_name)
-                table_tip = '\n\n另外，知识库里有你可能需要的表格「%s」，可直接下载原文件：' % _name
+                _doc = table_hit.doc_name or ''
+                _name = _re.sub(r'\.[^.]+$', '', _doc).strip() or (table_hit.table_name or '原始文件')
+                _tbl = table_hit.table_name or ''
+                table_tip = '\n\n另外，知识库里有你可能需要的原始文件「%s」（内含表格「%s」），可直接下载：' \
+                            % (_name, _tbl)
                 table_card = ts.table_hit_payload(table_hit)['__table_card__']
                 stored_answer = ts.embed_card_marker(full_response + table_tip, table_card)
 

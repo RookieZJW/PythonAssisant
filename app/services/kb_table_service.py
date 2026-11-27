@@ -830,11 +830,15 @@ def table_hit_payload(table, base_url='/api/v1'):
     url = '%s/kb/%s/tables/%s/download' % (base_url, kb_id, tid)
     if doc:
         url += '?doc=' + quote(doc, safe='')
+    # 下载物是原始文件本身，卡片标题应显示原文件名（去扩展名），
+    # 表格名只作为"内含表格"的说明，避免用户误以为下载的是单个表格文件。
+    doc_title = re.sub(r'\.[^.]+$', '', doc or '').strip() or name
     return {
         '__table_card__': {
             'table_id': tid,
             'table_name': name,
             'doc_name': doc,
+            'doc_title': doc_title,
             'url': url,
         }
     }

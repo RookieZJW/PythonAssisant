@@ -705,6 +705,44 @@ def reject_staging(kb_id, stage_id):
 
 # ---------- 表格清单与原件下载 ----------
 
+def legacy_download_response(legacy_id=None):
+    """兼容早期版本遗留的旧下载链接 /api/kb/download/<id>?file=<uuid>。
+
+    这些链接指向的文档在UI中已被删除/重建，file UUID 在当前库里不存在，
+    无法映射到任何真实原件。按"只返回真实存在文件"的铁律，绝不随便挑一个
+    文件顶替；返回一个带说明的页面，引导用户回知识库重新提问获取新链接。
+    """
+    file_uuid = (request.args.get('file') or '').strip()
+    # 尽力而为：若旧 UUID 恰好命中当前某张表的原件名/路径，才放行真实原件
+    row = None
+    if file_uuid:
+        row = KBTable.query.filter(
+            KBTable.original_path.like('%' + file_uuid + '%')
+        ).first()
+    if row and row.original_path and os.path.exists(row.original_path):
+        return send_file(row.original_path, as_attachment=True,
+                         download_name=row.original_name or os.path.basename(row.original_path))
+    # 找不到对应原件：返回可读页面，而非 JSON 404（IDM 会显示"无法下载-没有文件"）
+    html = '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<title>下载链接已过期</title>
+<style>body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:#f5f6f8;color:#1f2937;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{background:#fff;padding:32px 36px;border-radius:12px;max-width:460px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+h1{font-size:20px;margin:0 0 12px}p{line-height:1.7;color:#4b5563;font-size:14px}
+a{display:inline-block;margin-top:16px;padding:10px 18px;background:#2563eb;color:#fff;
+border-radius:8px;text-decoration:none;font-size:14px}</style></head><body><div class="box">
+<h1>这个下载链接已经过期</h1>
+<p>它来自旧版本的知识库问答，指向的文件已被删除或重新上传，系统中已没有对应的原件，因此无法下载。</p>
+<p>请回到知识库，重新提问需要的文件或表格，助手会给你一条新的下载链接。</p>
+<a href="/">返回知识库助手</a></div></body></html>'''
+    return Response(html, status=200, content_type='text/html; charset=utf-8')
+
+
+@kb_bp.route('/kb/download/<legacy_id>', methods=['GET'])
+def legacy_download_v1(legacy_id):
+    return legacy_download_response(legacy_id)
+
+
 @kb_bp.route('/kb/<kb_id>/tables', methods=['GET'])
 def list_kb_tables(kb_id):
     """列出知识库里真实抽取到的表格（不含生成内容）。"""
@@ -737,9 +775,11 @@ def download_kb_table(kb_id, table_id):
     铁律：只从留存目录取上传时的原件返回；原件不存在则 404。
     绝不根据表格数据重新生成文件，避免产出知识库里不存在的表格。
     """
-    _, err = _require_login()
-    if err: return err
-    if not KnowledgeBase.get_visible(kb_id, _uid()):
+    # 有登录态时做常规权限校验；无登录态时（IDM / 迅雷等下载器接管请求不带 Cookie）
+    # 依赖 URL 里的 kb_id + table_id（UUID，不可枚举）作为 capability URL 放行，
+    # 否则这些下载器会收到 401 并报"无法下载 - 没有文件"。
+    uid = session.get('user_id')
+    if uid and not KnowledgeBase.get_visible(kb_id, uid):
         return error("知识库不存在或无访问权限", 404)
     row = KBTable.query.filter_by(id=table_id, kb_id=kb_id).first()
     # 旧卡片/旧页面可能存着已删除的表格 id（文档重新上传后旧记录被清理）。
